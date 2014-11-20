@@ -1,0 +1,22 @@
+<package>
+  <name>dumbo_control</name>
+  <version>0.0.1</version>
+  <description>
+    Dumbo ros_control implementation for controlling Schunk arms, parallel gripper and reading force-torque sensors.
+  </description>
+  <maintainer email="fevb@kth.se">Francisco Vina</maintainer>
+  <license>BSD</license>
+
+  <url>http://wiki.ros.org/dumbo_control</url>
+
+  <author email="fevb@kth.se">Francisco Vina</author>
+  <maintainer email="fevb@kth.se">Francisco Vina</maintainer>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <run_depend>dumbo_hardware_interface</run_depend>
+
+  <export>
+    <metapackage/>
+  </export>
+</package>
