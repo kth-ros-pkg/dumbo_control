@@ -1,8 +1,8 @@
 /*
- *  dumbo_hardware_interface.h
+ *  force_torque_sensor_hardware_interface.cpp
  *
- *  Dumbo hardware interface for the ros_control framework
- *  Created on: Nov 20, 2014
+ *  Dumbo's ATI 6-axis force-torque sensors hardware interface for ros_control
+ *  Created on: Nov 21, 2014
  *  Authors:   Francisco Viña
  *            fevb <at> kth.se
  */
@@ -33,51 +33,20 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef FORCE_TORQUE_SENSOR_HARDWARE_INTERFACE_H_
+#define FORCE_TORQUE_SENSOR_HARDWARE_INTERFACE_H_
 
-#ifndef DUMBO_HARDWARE_INTERFACE_H_
-#define DUMBO_HARDWARE_INTERFACE_H_
 
-#include <ros/ros.h>
-#include <hardware_interface/robot_hw.h>
-#include <hardware_interface/joint_state_interface.h>
-#include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/force_torque_sensor_interface.h>
-
-#include <dumbo_hardware_interface/schunk_arm_hardware_interface.h>
-#include <dumbo_hardware_interface/pg70_hardware_interface.h>
-#include <dumbo_hardware_interface/force_torque_sensor_hardware_interface.h>
-
-#include <boost/scoped_ptr.hpp>
+#include <dumbo_force_torque_sensor/ForceTorqueSensor.h>
 
 namespace dumbo_hardware_interface
 {
 
-class DumboHardwareInterface : public hardware_interface::RobotHW
+class ForceTorqueSensorHardwareInterface
 {
 
-public:
-    DumboHardwareInterface();
-
-    ~DumboHardwareInterface();
-
-    void update();
-
-
-private:
-    ros::NodeHandle nh_;
-
-    //hardware interfaces
-    hardware_interface::JointStateInterface js_interface_;
-    hardware_interface::VelocityJointInterface vj_interface_;
-    hardware_interface::PositionJointInterface pj_interface_;
-    hardware_interface::ForceTorqueSensorInterface ft_interface_;
-
-    boost::scoped_ptr<SchunkArmHardwareInterface> left_arm_hw_;
-    boost::scoped_ptr<SchunkArmHardwareInterface> right_arm_hw_;
-
-
 };
-
 
 }
 

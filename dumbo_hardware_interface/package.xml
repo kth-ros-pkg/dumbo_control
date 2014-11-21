@@ -18,11 +18,13 @@
   <build_depend>hardware_interface</build_depend>
   <build_depend>dumbo_powercube_chain</build_depend>
   <build_depend>dumbo_force_torque_sensor</build_depend>
+  <build_depend>cob_srvs</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>hardware_interface</run_depend>
   <run_depend>dumbo_powercube_chain</run_depend>
   <run_depend>dumbo_force_torque_sensor</run_depend>
+  <run_depend>cob_srvs</run_depend>
 
 
 

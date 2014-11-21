@@ -1,7 +1,7 @@
 /*
  *  dumbo_hardware_interface.cpp
  *
- *  Dumbo hardware interface for ros_control
+ *  Dumbo hardware interface for the ros_control framework
  *  Created on: Nov 20, 2014
  *  Authors:   Francisco Viña
  *            fevb <at> kth.se
