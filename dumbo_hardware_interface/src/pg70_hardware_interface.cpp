@@ -34,3 +34,25 @@
 */
 
 #include <dumbo_hardware_interface/pg70_hardware_interface.h>
+
+
+namespace dumbo_hardware_interface
+{
+
+PG70HardwareInterface::PG70HardwareInterface(const std::string &gripper_name,
+                                             const ros::NodeHandle &nh,
+                                             boost::shared_ptr CAN_mutex,
+                                             boost::shared_ptr CAN_handle) :
+    gripper_name_(gripper_name_),
+    nh_(nh),
+    connected_(false)
+{
+
+
+
+}
+
+
+
+
+}

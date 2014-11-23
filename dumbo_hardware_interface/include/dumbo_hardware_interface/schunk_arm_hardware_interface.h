@@ -45,7 +45,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <pthread.h>
-#include <canlib.h>
+#include <kvaser_canlib/canlib.h>
 #include <cob_srvs/Trigger.h>
 
 namespace dumbo_hardware_interface

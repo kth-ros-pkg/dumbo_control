@@ -75,6 +75,10 @@ private:
     boost::scoped_ptr<SchunkArmHardwareInterface> left_arm_hw_;
     boost::scoped_ptr<SchunkArmHardwareInterface> right_arm_hw_;
 
+    boost::scoped_ptr<ForceTorqueSensorHardwareInterface> left_ft_hw_;
+    boost::scoped_ptr<ForceTorqueSensorHardwareInterface> right_ft_hw_;
+
+    boost::scoped_ptr<PG70HardwareInterface> pg70_hw_;
 
 };
 
