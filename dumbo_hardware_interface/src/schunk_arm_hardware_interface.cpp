@@ -46,7 +46,6 @@ SchunkArmHardwareInterface::SchunkArmHardwareInterface(const std::string &arm_na
     arm_name_(arm_name),
     nh_(nh),
     connected_(false)
-
 {
 
     pc_params_.reset(new PowerCubeCtrlParams());
@@ -187,14 +186,14 @@ void SchunkArmHardwareInterface::getROSParams()
 
         if((arm_name_!=(JointNames[i]).substr(0,4))&&(arm_name_!=(JointNames[i]).substr(0,5)))
         {
-            ROS_ERROR("arm_select parameter (%s) does not coincide with joint %d name (%s), shutting down node...",
+            ROS_ERROR("arm_name parameter (%s) does not coincide with joint %d name (%s), shutting down node...",
                       arm_name_.c_str(), i, JointNames[i].c_str());
             nh_.shutdown();
         }
 
     }
 
-    pc_params_->SetArmSelect(arm_name_);
+    pc_params_->setArmName(arm_name_);
 
 }
 
@@ -390,7 +389,7 @@ bool SchunkArmHardwareInterface::disconnectSrvCallback(cob_srvs::Trigger::Reques
         bool closed = pc_ctrl_->Close();
         connected_ = false;
         res.success.data = true;
-        ROS_INFO("Disconnecting %s arm", pc_params_->GetArmSelect().c_str());
+        ROS_INFO("Disconnecting %s arm", pc_params_->getArmName().c_str());
     }
 
     return true;

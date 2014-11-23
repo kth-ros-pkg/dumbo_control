@@ -37,6 +37,7 @@
 #ifndef PG70_HARDWARE_INTERFACE_H_
 #define PG70_HARDWARE_INTERFACE_H_
 
+#include <ros/ros.h>
 #include <hardware_interface/joint_state_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <dumbo_powercube_chain/PG70Gripper.h>
@@ -81,18 +82,14 @@ class PG70HardwareInterface
     bool disconnectSrvCallback(cob_srvs::Trigger::Request &req,
                                cob_srvs::Trigger::Response &res);
 
-    // service callbacks for stopping the modules
-    // or error recovery
-    bool stopSrvCallback(cob_srvs::Trigger::Request &req,
-                         cob_srvs::Trigger::Response &res);
-
+    // service callbacks for error recovery
     bool recoverSrvCallback(cob_srvs::Trigger::Request &req,
                          cob_srvs::Trigger::Response &res);
 
 private:
 
     // ros stuff
-    ros::NodeHandle nh_;
+    ros::NodeHandle nh_; // should be in "PG70_controller" namespace
 
     ros::ServiceServer connect_service_server_;
     ros::ServiceServer disconnect_service_server_;
@@ -100,10 +97,10 @@ private:
     ros::ServiceServer recover_service_server_;
 
     // low level powercube control objects
-    boost::scoped_ptr<PowerCubeCtrl> pc_ctrl_;
-    boost::shared_ptr<PowerCubeCtrlParams> pc_params_;
+    boost::scoped_ptr<PowerCubeCtrl> pg70_ctrl_;
+    boost::shared_ptr<PowerCubeCtrlParams> pg70_params_;
 
-    std::string gripper_name_; // "left" or "right"
+    std::string gripper_name_; // "PG70"
 
     // arm parameters and variables for hardware handles
     std::vector<std::string> joint_names_;
