@@ -40,11 +40,9 @@
 namespace dumbo_hardware_interface
 {
 
-PG70HardwareInterface::PG70HardwareInterface(const std::string &gripper_name,
-                                             const ros::NodeHandle &nh,
+PG70HardwareInterface::PG70HardwareInterface(const ros::NodeHandle &nh,
                                              boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                                              boost::shared_ptr<canHandle> CAN_handle) :
-    gripper_name_(gripper_name),
     nh_(nh),
     connected_(false)
 {
@@ -183,9 +181,6 @@ void PG70HardwareInterface::getROSParams()
     pg70_params_->SetJointNames(JointNames);
     pg70_params_->SetMaxAcc(MaxAccelerations);
     pg70_params_->SetSerialNumber((unsigned long int) SerialNumber);
-
-    // initialize joint state messages
-    // TODO: initialize interfaces
 }
 
 
@@ -260,6 +255,7 @@ void PG70HardwareInterface::registerHandles(hardware_interface::JointStateInterf
     joint_efforts_ = std::vector<double>(dof, 0.0);
 
     joint_velocity_command_ = std::vector<double>(dof, 0.0);
+    joint_position_command_ = std::vector<double>(dof, 0.0);
 
     for(unsigned int i=0; i<dof; i++)
     {

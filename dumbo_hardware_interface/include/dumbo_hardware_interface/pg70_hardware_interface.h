@@ -100,8 +100,6 @@ private:
     boost::scoped_ptr<PowerCubeCtrl> pg70_ctrl_;
     boost::shared_ptr<PowerCubeCtrlParams> pg70_params_;
 
-    std::string gripper_name_; // "PG70"
-
     // arm parameters and variables for hardware handles
     std::vector<std::string> joint_names_;
     std::vector<double> joint_positions_;

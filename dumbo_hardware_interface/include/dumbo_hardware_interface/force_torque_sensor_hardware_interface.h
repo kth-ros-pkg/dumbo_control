@@ -1,5 +1,5 @@
 /*
- *  force_torque_sensor_hardware_interface.cpp
+ *  force_torque_sensor_hardware_interface.h
  *
  *  Dumbo's ATI 6-axis force-torque sensors hardware interface for ros_control
  *  Created on: Nov 21, 2014
@@ -37,8 +37,10 @@
 #define FORCE_TORQUE_SENSOR_HARDWARE_INTERFACE_H_
 
 
+#include <ros/ros.h>
 #include <hardware_interface/force_torque_sensor_interface.h>
 #include <dumbo_force_torque_sensor/ForceTorqueSensor.h>
+#include <cob_srvs/Trigger.h>
 
 namespace dumbo_hardware_interface
 {
@@ -46,6 +48,40 @@ namespace dumbo_hardware_interface
 class ForceTorqueSensorHardwareInterface
 {
 
+public:
+
+    ForceTorqueSensorHardwareInterface(const ros::NodeHandle &nh);
+
+    void getROSParams();
+
+    // register force-torque sensor hardware interface handle for ros_control
+    void registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_interface);
+
+    // read force-torque measurement from CAN bus
+    void read();
+
+    // request new force-torque measurement via CAN bus
+    void write();
+
+    // service callbacks for connecting/disconnecting from
+    // the CAN bus
+    bool connectSrvCallback(cob_srvs::Trigger::Request &req,
+                            cob_srvs::Trigger::Response &res);
+
+    bool disconnectSrvCallback(cob_srvs::Trigger::Request &req,
+                               cob_srvs::Trigger::Response &res);
+
+
+private:
+    ros::NodeHandle nh_;
+    bool connected_;
+
+    // buffers for force/torque
+    std::vector<double> force_;
+    std::vector<double> torque_;
+
+    std::string serial_number_;
+    std::string arm_name_;
 };
 
 }

@@ -39,11 +39,9 @@
 namespace dumbo_hardware_interface
 {
 
-SchunkArmHardwareInterface::SchunkArmHardwareInterface(const std::string &arm_name,
-                                                       const ros::NodeHandle &nh,
+SchunkArmHardwareInterface::SchunkArmHardwareInterface(const ros::NodeHandle &nh,
                                                        boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                                                        boost::shared_ptr<canHandle> CAN_handle) :
-    arm_name_(arm_name),
     nh_(nh),
     connected_(false)
 {
@@ -102,6 +100,20 @@ void SchunkArmHardwareInterface::getROSParams()
 
     /// Initialize parameters
     pc_params_->Init(CanBaudrate, ModulIDs);
+
+
+    /// Get arm name
+
+    if(nh_.hasParam("arm_name"))
+    {
+        nh_.getParam("arm_name", arm_name_);
+    }
+
+    else
+    {
+        ROS_ERROR("Parameters arm_name not found, shutting down node");
+        nh_.shutdown();
+    }
 
     /// Get joint names
     XmlRpc::XmlRpcValue JointNamesXmlRpc;
