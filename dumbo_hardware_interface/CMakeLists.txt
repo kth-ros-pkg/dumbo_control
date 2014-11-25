@@ -7,7 +7,6 @@ find_package(catkin REQUIRED COMPONENTS
     hardware_interface
     dumbo_powercube_chain
     dumbo_force_torque_sensor
-    cob_srvs
 )
 
 
@@ -16,7 +15,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp hardware_interface dumbo_powercube_chain dumbo_force_torque_sensor cob_srvs
+  CATKIN_DEPENDS roscpp hardware_interface dumbo_powercube_chain dumbo_force_torque_sensor
   LIBRARIES dumbo_hardware_interface  
   DEPENDS
 )
