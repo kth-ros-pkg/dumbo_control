@@ -46,12 +46,11 @@
 #include <boost/scoped_ptr.hpp>
 #include <pthread.h>
 #include <kvaser_canlib/canlib.h>
-#include <cob_srvs/Trigger.h>
 
 namespace dumbo_hardware_interface
 {
 
-class SchunkArmHardwareInterface
+class SchunkArmHardwareInterface : public PowerCubeCtrl
 {
 
 public:
@@ -59,8 +58,7 @@ public:
     // nodehandle for getting ROS parameters and setting up services
     // CAN mutex and handles in case the arm shares CAN bus with e.g.
     // a gripper
-    SchunkArmHardwareInterface(const std::string &arm_name,
-                               const ros::NodeHandle &nh,
+    SchunkArmHardwareInterface(const ros::NodeHandle &nh,
                                boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                                boost::shared_ptr<canHandle> CAN_handle);
 
@@ -79,28 +77,34 @@ public:
     void registerHandles(hardware_interface::JointStateInterface &js_interface,
                          hardware_interface::VelocityJointInterface &vj_interface);
 
-    // read joint positions from encoders
-    void read();
+    // connects to arm on CAN bus
+    bool connect();
 
-    // execute joint velocity commands
+    // disconnects arm from CAN bus
+    bool disconnect();
+
+    // read joint positions from encoders
+    // reads only one module
+    // If wait_for_response==True then it performs a blocking CAN read call
+    // (it waits until a msg has arrived)
+    // It assumes that a write() call was made in the previous iteration
+    void read(bool wait_for_response=false);
+
+    // execute joint velocity command.
+    // sends to command to only one joint
+    // Does not wait for status msg response, this msg
+    // will be read by the read() function
     void write();
 
+    // writes command to a module and waits for its status message
+    // reply over the CAN bus
+    void writeAndRead();
 
-    // service callbacks for connecting/disconnecting from
-    // the CAN bus
-    bool connectSrvCallback(cob_srvs::Trigger::Request &req,
-                            cob_srvs::Trigger::Response &res);
+    // stops joints on the arm
+    bool stop();
 
-    bool disconnectSrvCallback(cob_srvs::Trigger::Request &req,
-                               cob_srvs::Trigger::Response &res);
-
-    // service callbacks for stopping the modules
-    // or error recovery
-    bool stopSrvCallback(cob_srvs::Trigger::Request &req,
-                         cob_srvs::Trigger::Response &res);
-
-    bool recoverSrvCallback(cob_srvs::Trigger::Request &req,
-                         cob_srvs::Trigger::Response &res);
+    // triggers error recovery on the arm's joints
+    bool recover();
 
 
 private:
@@ -108,16 +112,17 @@ private:
     // ros stuff
     ros::NodeHandle nh_;
 
-    ros::ServiceServer connect_service_server_;
-    ros::ServiceServer disconnect_service_server_;
-    ros::ServiceServer stop_service_server_;
-    ros::ServiceServer recover_service_server_;
-
-    // low level powercube control objects
-    boost::scoped_ptr<PowerCubeCtrl> pc_ctrl_;
-    boost::shared_ptr<PowerCubeCtrlParams> pc_params_;
-
     std::string arm_name_; // "left" or "right"
+
+    // current module being controlled
+    // -1: no command has been sent to a module
+    // 1-7: a command has been set to this module
+    int module_number_;
+
+    // indicates if a write() has been performed, helps for
+    // sync of read() and write(). In such case the read()
+    // will receive the status response from the module
+    bool written_;
 
     // arm parameters and variables for hardware handles
     std::vector<std::string> joint_names_;
@@ -126,9 +131,6 @@ private:
     std::vector<double> joint_efforts_;
 
     std::vector<double> joint_velocity_command_;
-
-    // indicates whether connected to CAN bus or not
-    bool connected_;
 };
 
 }

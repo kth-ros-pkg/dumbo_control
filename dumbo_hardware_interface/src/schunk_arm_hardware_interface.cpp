@@ -42,17 +42,12 @@ namespace dumbo_hardware_interface
 SchunkArmHardwareInterface::SchunkArmHardwareInterface(const ros::NodeHandle &nh,
                                                        boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                                                        boost::shared_ptr<canHandle> CAN_handle) :
+    PowerCubeCtrl(CAN_mutex, CAN_handle),
     nh_(nh),
-    connected_(false)
+    written_(false),
+    module_number_(0)
 {
-
-    pc_params_.reset(new PowerCubeCtrlParams());
-    pc_ctrl_.reset(new PowerCubeCtrl(pc_params_, CAN_mutex, CAN_handle));
-
-    connect_service_server_ = nh_.advertiseService("connect", &SchunkArmHardwareInterface::connectSrvCallback, this);
-    disconnect_service_server_ = nh_.advertiseService("disconnect", &SchunkArmHardwareInterface::disconnectSrvCallback, this);
-    stop_service_server_ = nh_.advertiseService("stop", &SchunkArmHardwareInterface::stopSrvCallback, this);
-    recover_service_server_ = nh_.advertiseService("recover", &SchunkArmHardwareInterface::recoverSrvCallback, this);
+    params_.reset(new PowerCubeCtrlParams());
 
     getROSParams();
     getRobotDescriptionParams();
@@ -60,7 +55,6 @@ SchunkArmHardwareInterface::SchunkArmHardwareInterface(const ros::NodeHandle &nh
 
 SchunkArmHardwareInterface::~SchunkArmHardwareInterface()
 {
-    bool closed = pc_ctrl_->Close();
 }
 
 void SchunkArmHardwareInterface::getROSParams()
@@ -99,7 +93,7 @@ void SchunkArmHardwareInterface::getROSParams()
     }
 
     /// Initialize parameters
-    pc_params_->Init(CanBaudrate, ModulIDs);
+    params_->Init(CanBaudrate, ModulIDs);
 
 
     /// Get arm name
@@ -137,12 +131,12 @@ void SchunkArmHardwareInterface::getROSParams()
     }
 
     /// Check dimension with with DOF
-    if ((int)JointNames.size() != pc_params_->GetDOF())
+    if ((int)JointNames.size() != params_->GetDOF())
     {
         ROS_ERROR("Wrong dimensions of parameter joint_names, shutting down node...");
         nh_.shutdown();
     }
-    pc_params_->SetJointNames(JointNames);
+    params_->SetJointNames(JointNames);
 
 
     /// Get max accelerations
@@ -167,12 +161,12 @@ void SchunkArmHardwareInterface::getROSParams()
     }
 
     /// Check dimension with with DOF
-    if ((int)MaxAccelerations.size() != pc_params_->GetDOF())
+    if ((int)MaxAccelerations.size() != params_->GetDOF())
     {
         ROS_ERROR("Wrong dimensions of parameter max_accelerations, shutting down node...");
         nh_.shutdown();
     }
-    pc_params_->SetMaxAcc(MaxAccelerations);
+    params_->SetMaxAcc(MaxAccelerations);
 
     /// Get horizon
     double Horizon;
@@ -187,12 +181,12 @@ void SchunkArmHardwareInterface::getROSParams()
         Horizon = 0.05;
         ROS_WARN("Parameter horizon not available, setting to default value: %f sec", Horizon);
     }
-    pc_ctrl_->setHorizon(Horizon);
+    setHorizon(Horizon);
 
 
     // make sure arm select coincides with joint names in the parameter server
     JointNames.clear();
-    JointNames = pc_params_->GetJointNames();
+    JointNames = params_->GetJointNames();
     for(int i=0; i<(int)(JointNames.size()); i++)
     {
 
@@ -205,14 +199,14 @@ void SchunkArmHardwareInterface::getROSParams()
 
     }
 
-    pc_params_->setArmName(arm_name_);
+    params_->setArmName(arm_name_);
 
 }
 
 void SchunkArmHardwareInterface::getRobotDescriptionParams()
 {
-    unsigned int DOF = pc_params_->GetDOF();
-    std::vector<std::string> JointNames = pc_params_->GetJointNames();
+    unsigned int DOF = params_->GetDOF();
+    std::vector<std::string> JointNames = params_->GetJointNames();
 
     /// Get robot_description from ROS parameter server
     std::string param_name = "robot_description";
@@ -281,10 +275,10 @@ void SchunkArmHardwareInterface::getRobotDescriptionParams()
 
 
     /// Set parameters
-    pc_params_->SetMaxVel(MaxVelocities);
-    pc_params_->SetLowerLimits(LowerLimits);
-    pc_params_->SetUpperLimits(UpperLimits);
-    pc_params_->SetOffsets(Offsets);
+    params_->SetMaxVel(MaxVelocities);
+    params_->SetLowerLimits(LowerLimits);
+    params_->SetUpperLimits(UpperLimits);
+    params_->SetOffsets(Offsets);
 
 }
 
@@ -294,8 +288,8 @@ void SchunkArmHardwareInterface::registerHandles(hardware_interface::JointStateI
                                                  hardware_interface::VelocityJointInterface &vj_interface)
 {
     // initialize joint state and commands
-    unsigned int dof = pc_params_->GetDOF();
-    joint_names_ = pc_params_->GetJointNames();
+    unsigned int dof = params_->GetDOF();
+    joint_names_ = params_->GetJointNames();
     joint_positions_ = std::vector<double>(dof, 0.0);
     joint_velocities_ = std::vector<double>(dof, 0.0);
     joint_efforts_ = std::vector<double>(dof, 0.0);
@@ -320,150 +314,110 @@ void SchunkArmHardwareInterface::registerHandles(hardware_interface::JointStateI
 
 }
 
+bool SchunkArmHardwareInterface::connect()
+{
+    bool ret = init();
 
-void SchunkArmHardwareInterface::read()
+    if(ret)
+    {
+        unsigned int dof = params_->GetDOF();
+
+        // reset joint variables
+        for(unsigned int i=0; i<dof; i++)
+        {
+            joint_positions_[i] = getPositions()[i];
+        }
+
+        joint_velocities_ = std::vector<double>(dof, 0.0);
+        joint_efforts_ = std::vector<double>(dof, 0.0);
+
+        joint_velocity_command_ = std::vector<double>(dof, 0.0);
+
+        written_ = false;
+        module_number_ = 0;
+    }
+    return ret;
+}
+
+
+bool SchunkArmHardwareInterface::disconnect()
+{
+    return close();
+}
+
+void SchunkArmHardwareInterface::read(bool wait_for_response)
 {
     // read the joint positions and velocities and store them in the buffer
-    if(pc_ctrl_->isInitialized())
+    if(isInitialized())
     {
-        for(unsigned int i=0; i<pc_params_->GetDOF(); i++)
+        // we need to read the status response msg from the CAN bus
+        if(written_)
         {
-            joint_positions_[i] = pc_ctrl_->getPositions()[i];
-            joint_velocities_[i] = pc_ctrl_->getVelocities()[i];
+            bool ret = readState(module_number_, wait_for_response);
+            written_ = false;
+
+            if(!ret)
+            {
+                ROS_ERROR("Error reading status message module %d on %s arm", module_number_,
+                          params_->getArmName().c_str());
+                return;
+            }
         }
+
+        joint_positions_[module_number_] = getPositions()[module_number_];
+        joint_velocities_[module_number_] = getVelocities()[module_number_];
     }
 
 }
 
 void SchunkArmHardwareInterface::write()
 {
-    for(unsigned int i=0; i<pc_params_->GetDOF(); i++)
+
+    if(isInitialized())
     {
-        pc_ctrl_->moveVel(joint_velocity_command_);
+        bool ret = moveVel(joint_velocity_command_[module_number_], module_number_, false);
+
+        if(!ret)
+        {
+            ROS_ERROR("Error writing to module %d on %s arm", module_number_,
+                      params_->getArmName().c_str());
+            return;
+        }
+
+        written_ = true;
+
+        // sequential ordering of commands
+        module_number_++;
+        if(module_number_ >= params_->GetDOF()) module_number_ = 0;
     }
 }
 
-
-/*!
-     * \brief Executes the service callback for init.
-     *
-     * Connects to the hardware and initialized it.
-     * \param req Service request
-     * \param res Service response
-     */
-bool SchunkArmHardwareInterface::connectSrvCallback(cob_srvs::Trigger::Request &req,
-                                                    cob_srvs::Trigger::Response &res)
+void SchunkArmHardwareInterface::writeAndRead()
 {
-    if (!connected_)
+    if(isInitialized())
     {
-        ROS_INFO("Initializing powercubes...");
 
-        /// initialize powercubes
-        if (pc_ctrl_->init())
+        // clear previously written message
+        if(written_)
         {
-
-            connected_ = true;
-            res.success.data = true;
-            ROS_INFO("...initializing powercubes successful");
-
+            read(true);
         }
 
-        else
+        bool ret = moveVel(joint_velocity_command_[module_number_], module_number_, true);
+
+        if(!ret)
         {
-            res.success.data = false;
-            res.error_message.data = pc_ctrl_->getErrorMessage();
-            ROS_ERROR("...initializing powercubes not successful. error: %s", res.error_message.data.c_str());
+            ROS_ERROR("Error read/writing to module %d on %s arm", module_number_,
+                      params_->getArmName().c_str());
+            return;
         }
+
+        // sequential ordering of commands
+        module_number_++;
+        if(module_number_ >= params_->GetDOF()) module_number_ = 0;
+
     }
 
-    else
-    {
-        res.success.data = true;
-        res.error_message.data = "powercubes already initialized";
-        ROS_WARN("...initializing powercubes not successful. error: %s",res.error_message.data.c_str());
-    }
-
-    return true;
-}
-
-bool SchunkArmHardwareInterface::disconnectSrvCallback(cob_srvs::Trigger::Request &req,
-                                                       cob_srvs::Trigger::Response &res)
-{
-    if (!connected_)
-    {
-        ROS_WARN("powercubes already switched off");
-        res.success.data = false;
-        res.error_message.data = "powercubes already switched off";
-    }
-
-    else
-    {
-        bool closed = pc_ctrl_->Close();
-        connected_ = false;
-        res.success.data = true;
-        ROS_INFO("Disconnecting %s arm", pc_params_->getArmName().c_str());
-    }
-
-    return true;
-}
-
-/*!
-     * \brief Executes the service callback for stop.
-     *
-     * Stops all hardware movements.
-     * \param req Service request
-     * \param res Service response
-     */
-bool SchunkArmHardwareInterface::stopSrvCallback(cob_srvs::Trigger::Request &req,
-                                                 cob_srvs::Trigger::Response &res)
-{
-    ROS_INFO("Stopping powercubes...");
-
-    /// stop powercubes
-    if (pc_ctrl_->Stop())
-    {
-        res.success.data = true;
-        ROS_INFO("...stopping powercubes successful.");
-    }
-
-    else
-    {
-        res.success.data = false;
-        res.error_message.data = pc_ctrl_->getErrorMessage();
-        ROS_ERROR("...stopping powercubes not successful. error: %s", res.error_message.data.c_str());
-    }
-    return true;
-}
-
-
-bool SchunkArmHardwareInterface::recoverSrvCallback(cob_srvs::Trigger::Request &req,
-                                                    cob_srvs::Trigger::Response &res)
-{
-    ROS_INFO("Recovering powercubes...");
-    if (connected_)
-    {
-        /// stopping all arm movements
-        if (pc_ctrl_->Recover())
-        {
-            res.success.data = true;
-            ROS_INFO("...recovering powercubes successful.");
-        }
-        else
-        {
-            res.success.data = false;
-            res.error_message.data = pc_ctrl_->getErrorMessage();
-            ROS_ERROR("...recovering powercubes not successful. error: %s", res.error_message.data.c_str());
-        }
-    }
-
-    else
-    {
-        res.success.data = false;
-        res.error_message.data = "powercubes not initialized";
-        ROS_ERROR("...recovering powercubes not successful. error: %s",res.error_message.data.c_str());
-    }
-
-    return true;
 }
 
 }
