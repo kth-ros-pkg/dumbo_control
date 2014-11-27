@@ -40,7 +40,7 @@
 #include <ros/ros.h>
 #include <hardware_interface/force_torque_sensor_interface.h>
 #include <dumbo_force_torque_sensor/ForceTorqueSensor.h>
-#include <cob_srvs/Trigger.h>
+#include <boost/scoped_ptr.hpp>
 
 namespace dumbo_hardware_interface
 {
@@ -57,28 +57,28 @@ public:
     // register force-torque sensor hardware interface handle for ros_control
     void registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_interface);
 
+    // connects to F/T sensor on CAN bus
+    bool connect();
+
+    // disconnects from F/T sensor on CAN bus
+    bool disconnect();
+
     // read force-torque measurement from CAN bus
     void read();
 
     // request new force-torque measurement via CAN bus
     void write();
 
-    // service callbacks for connecting/disconnecting from
-    // the CAN bus
-    bool connectSrvCallback(cob_srvs::Trigger::Request &req,
-                            cob_srvs::Trigger::Response &res);
-
-    bool disconnectSrvCallback(cob_srvs::Trigger::Request &req,
-                               cob_srvs::Trigger::Response &res);
-
 
 private:
     ros::NodeHandle nh_;
-    bool connected_;
 
     // buffers for force/torque
     std::vector<double> force_;
     std::vector<double> torque_;
+
+    // class for low level force-torque sensor interface
+    boost::scoped_ptr<ForceTorqueSensor> ft_sensor_;
 
     std::string serial_number_;
     std::string arm_name_;

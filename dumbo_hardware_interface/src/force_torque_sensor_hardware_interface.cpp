@@ -34,3 +34,92 @@
 */
 
 #include <dumbo_hardware_interface/force_torque_sensor_hardware_interface.h>
+
+
+namespace dumbo_hardware_interface
+{
+
+ForceTorqueSensorHardwareInterface::ForceTorqueSensorHardwareInterface(const ros::NodeHandle &nh) :
+    nh_(nh)
+{
+
+    force_.resize(3);
+    torque_.resize(3);
+
+    getROSParams();
+    ft_sensor_.reset(new ForceTorqueSensor(serial_number_, arm_name_));
+}
+
+void ForceTorqueSensorHardwareInterface::getROSParams()
+{
+    std::string SerialNumber;
+    if (nh_.hasParam("serial_number"))
+    {
+        nh_.getParam("serial_number", SerialNumber);
+    }
+
+    else
+    {
+        ROS_ERROR("Parameter SerialNumber not available");
+        nh_.shutdown();
+        return;
+    }
+
+    std::string arm_name;
+    if (nh_.hasParam("arm_name"))
+    {
+        nh_.getParam("arm_name", arm_name);
+    }
+
+    else
+    {
+        ROS_ERROR("Parameter arm_name not available");
+        nh_.shutdown();
+        return;
+    }
+
+
+    serial_number_ = SerialNumber;
+    arm_name_ = arm_name;
+}
+
+
+void ForceTorqueSensorHardwareInterface::registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_interface)
+{
+    ft_interface.registerHandle(hardware_interface::ForceTorqueSensorHandle(
+                                    arm_name_+"_arm_ft_sensor",
+                                    arm_name_+"_arm_ft_sensor",
+                                    &(force_[0]),
+                                    &(torque_[0])));
+}
+
+bool ForceTorqueSensorHardwareInterface::connect()
+{
+    return ft_sensor_->Init();
+}
+
+bool ForceTorqueSensorHardwareInterface::disconnect()
+{
+    ft_sensor_->Disconnect();
+    return true;
+}
+
+void ForceTorqueSensorHardwareInterface::read()
+{
+    if(ft_sensor_->isInitialized())
+    {
+
+    }
+}
+
+
+void ForceTorqueSensorHardwareInterface::write()
+{
+    if(ft_sensor_->isInitialized())
+    {
+
+    }
+
+}
+
+}
