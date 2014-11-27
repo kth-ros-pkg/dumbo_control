@@ -43,15 +43,10 @@ namespace dumbo_hardware_interface
 PG70HardwareInterface::PG70HardwareInterface(const ros::NodeHandle &nh,
                                              boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                                              boost::shared_ptr<canHandle> CAN_handle) :
-    nh_(nh),
-    connected_(false)
+    PG70Gripper(CAN_mutex, CAN_handle),
+    nh_(nh)
 {
-    pg70_params_.reset(new PowerCubeCtrlParams());
-    pg70_ctrl_.reset(new PowerCubeCtrl(pg70_params_, CAN_mutex, CAN_handle));
-
-    connect_service_server_ = nh_.advertiseService("connect", &PG70HardwareInterface::connectSrvCallback, this);
-    disconnect_service_server_ = nh_.advertiseService("disconnect", &PG70HardwareInterface::disconnectSrvCallback, this);
-    recover_service_server_ = nh_.advertiseService("recover", &PG70HardwareInterface::recoverSrvCallback, this);
+    params_.reset(new PowerCubeCtrlParams());
 
     getROSParams();
     getRobotDescriptionParams();
@@ -176,11 +171,11 @@ void PG70HardwareInterface::getROSParams()
         nh_.shutdown();
     }
 
-    pg70_params_->Init(CanBaudrate, ModulIDs);
-    pg70_params_->setArmName(arm_name);
-    pg70_params_->SetJointNames(JointNames);
-    pg70_params_->SetMaxAcc(MaxAccelerations);
-    pg70_params_->SetSerialNumber((unsigned long int) SerialNumber);
+    params_->Init(CanBaudrate, ModulIDs);
+    params_->setArmName(arm_name);
+    params_->SetJointNames(JointNames);
+    params_->SetMaxAcc(MaxAccelerations);
+    params_->SetSerialNumber((unsigned long int) SerialNumber);
 }
 
 
@@ -221,7 +216,7 @@ void PG70HardwareInterface::getRobotDescriptionParams()
 
 
     // Get gripper params
-    std::vector<std::string> JointNames = pg70_params_->GetJointNames();
+    std::vector<std::string> JointNames = params_->GetJointNames();
     std::vector<double> LowerLimits(JointNames.size());
     std::vector<double> UpperLimits(JointNames.size());
     std::vector<double> MaxVel(JointNames.size());
@@ -238,9 +233,9 @@ void PG70HardwareInterface::getRobotDescriptionParams()
     }
 
 
-    pg70_params_->SetLowerLimits(LowerLimits);
-    pg70_params_->SetUpperLimits(UpperLimits);
-    pg70_params_->SetMaxVel(MaxVel);
+    params_->SetLowerLimits(LowerLimits);
+    params_->SetUpperLimits(UpperLimits);
+    params_->SetMaxVel(MaxVel);
 }
 
 void PG70HardwareInterface::registerHandles(hardware_interface::JointStateInterface &js_interface,
@@ -249,7 +244,7 @@ void PG70HardwareInterface::registerHandles(hardware_interface::JointStateInterf
 {
     // initialize joint state and commands
     unsigned int dof = 2;
-    joint_names_ = pg70_params_->GetJointNames();
+    joint_names_ = params_->GetJointNames();
     joint_positions_ = std::vector<double>(dof, 0.0);
     joint_velocities_ = std::vector<double>(dof, 0.0);
     joint_efforts_ = std::vector<double>(dof, 0.0);
@@ -278,100 +273,44 @@ void PG70HardwareInterface::registerHandles(hardware_interface::JointStateInterf
     }
 }
 
-void PG70HardwareInterface::read()
+void PG70HardwareInterface::read(bool wait_for_response)
 {
-
-}
-
-
-void PG70HardwareInterface::write()
-{
-
-}
-
-bool PG70HardwareInterface::connectSrvCallback(cob_srvs::Trigger::Request &req,
-                                               cob_srvs::Trigger::Response &res)
-{
-    if (!connected_)
+    if(isInitialized())
     {
-        ROS_INFO("Connecting to PG70 gripper...");
+        bool ret = PowerCubeCtrl::readState(0, wait_for_response);
 
-        if(pg70_ctrl_->init())
+        if(!ret)
         {
-            connected_ = true;
-            res.success.data = true;
-            ROS_INFO("...initializing PG70 gripper successful");
+            ROS_ERROR("Error reading status message of PG70 gripper on %s arm.", params_->getArmName().c_str());
+            return;
         }
 
-        else
-        {
-            ROS_ERROR("Couldn't initialize PG70 gripper on %s arm.", pg70_params_->getArmName().c_str());
-            connected_ = false;
-            res.success.data = false;
-        }
-
+        joint_positions_[0] = getPositions()[0]/2.0;
+        joint_positions_[1] = getPositions()[0]/2.0;
+        joint_velocities_[0] = getVelocities()[0];
+        joint_velocities_[1] = getVelocities()[0];
     }
 
-    else
-    {
-        res.success.data = true;
-        res.error_message.data = "PG70 gripper already initialized";
-        ROS_WARN("...initializing PG70 gripper not successful. error: %s",res.error_message.data.c_str());
-    }
-
-    return true;
 }
 
-bool PG70HardwareInterface::disconnectSrvCallback(cob_srvs::Trigger::Request &req,
-                                                  cob_srvs::Trigger::Response &res)
+
+void PG70HardwareInterface::writeVel()
 {
-    if (!connected_)
+    if(isInitialized())
     {
-        ROS_WARN("PG70 gripper already switched off");
-        res.success.data = false;
-        res.error_message.data = "PG70 gripper already switched off";
+        PowerCubeCtrl::moveVel(joint_velocity_command_[0], 0, false);
     }
-
-    else
-    {
-        connected_ = false;
-        res.success.data = true;
-        ROS_INFO("Shutting down PG70 gripper");
-    }
-
-
-    return true;
 }
 
-bool PG70HardwareInterface::recoverSrvCallback(cob_srvs::Trigger::Request &req,
-                                               cob_srvs::Trigger::Response &res)
+void PG70HardwareInterface::writePos()
 {
-    ROS_INFO("Recovering PG70 Gripper...");
-    if (connected_)
+    if(isInitialized())
     {
-        /// stopping all arm movements
-        if (pg70_ctrl_->Recover())
-        {
-            res.success.data = true;
-            ROS_INFO("...recovering PG70 gripper successful.");
-        }
-        else
-        {
-            res.success.data = false;
-            res.error_message.data = pg70_ctrl_->getErrorMessage();
-            ROS_ERROR("...recovering PG70 gripper not successful. error: %s", res.error_message.data.c_str());
-        }
+        double pos;
     }
-
-    else
-    {
-        res.success.data = false;
-        res.error_message.data = "PG70 gripper not initialized";
-        ROS_ERROR("...recovering PG70 gripper not successful. error: %s",res.error_message.data.c_str());
-    }
-
-    return true;
 }
+
+
 
 
 }

@@ -50,10 +50,9 @@
 namespace dumbo_hardware_interface
 {
 
-class PG70HardwareInterface
+class PG70HardwareInterface : public PG70Gripper
 {
-    PG70HardwareInterface(const std::string &gripper_name,
-                          const ros::NodeHandle &nh,
+    PG70HardwareInterface(const ros::NodeHandle &nh,
                           boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                           boost::shared_ptr<canHandle> CAN_handle);
 
@@ -68,37 +67,19 @@ class PG70HardwareInterface
                          hardware_interface::PositionJointInterface &pj_interface);
 
     // read joint positions from encoders
-    void read();
+    void read(bool wait_for_response=false);
 
     // execute joint velocity commands
     // TODO: how to switch/execute position commands from /command_pos topic
-    void write();
+    void writeVel();
 
-    // service callbacks for connecting/disconnecting from
-    // the CAN bus
-    bool connectSrvCallback(cob_srvs::Trigger::Request &req,
-                            cob_srvs::Trigger::Response &res);
-
-    bool disconnectSrvCallback(cob_srvs::Trigger::Request &req,
-                               cob_srvs::Trigger::Response &res);
-
-    // service callbacks for error recovery
-    bool recoverSrvCallback(cob_srvs::Trigger::Request &req,
-                         cob_srvs::Trigger::Response &res);
+    // execute joint position command
+    void writePos();
 
 private:
 
     // ros stuff
     ros::NodeHandle nh_; // should be in "PG70_controller" namespace
-
-    ros::ServiceServer connect_service_server_;
-    ros::ServiceServer disconnect_service_server_;
-    ros::ServiceServer stop_service_server_;
-    ros::ServiceServer recover_service_server_;
-
-    // low level powercube control objects
-    boost::scoped_ptr<PowerCubeCtrl> pg70_ctrl_;
-    boost::shared_ptr<PowerCubeCtrlParams> pg70_params_;
 
     // arm parameters and variables for hardware handles
     std::vector<std::string> joint_names_;
@@ -108,9 +89,6 @@ private:
 
     std::vector<double> joint_velocity_command_;
     std::vector<double> joint_position_command_;
-
-    // indicates whether connected to CAN bus or not
-    bool connected_;
 
 
 };
