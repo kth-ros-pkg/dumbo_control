@@ -100,12 +100,6 @@ public:
     // reply over the CAN bus
     void writeAndRead();
 
-    // stops joints on the arm
-    bool stop();
-
-    // triggers error recovery on the arm's joints
-    bool recover();
-
 
 private:
 
