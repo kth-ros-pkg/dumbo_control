@@ -60,7 +60,29 @@ public:
 
     ~DumboHardwareInterface();
 
-    void update();
+    // register handles for ros_control HW interfaces
+    void registerHandles();
+
+    void connect();
+
+    void disconnect();
+
+    // read arms, gripper, ft sensors
+    void read();
+
+    // sends velocity commands to arms
+    // requests ft measurements
+    // if PG70 is in velocity mode
+    // send velocity commands to it
+    void write();
+
+    // sends velocity commands to arms
+    // requests ft measurements
+    // send a position command to PG70
+    // in this case do read&write in corresponding schunk arm
+    void write(double pos);
+
+
 
 
 private:
