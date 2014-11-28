@@ -40,22 +40,26 @@ namespace dumbo_hardware_interface
 {
 
 ForceTorqueSensorHardwareInterface::ForceTorqueSensorHardwareInterface(const ros::NodeHandle &nh) :
-    nh_(nh)
+    ForceTorqueSensor(),
+    nh_(nh), written_(false)
 {
-
     force_.resize(3);
     torque_.resize(3);
 
     getROSParams();
-    ft_sensor_.reset(new ForceTorqueSensor(serial_number_, arm_name_));
+}
+
+ForceTorqueSensorHardwareInterface::~ForceTorqueSensorHardwareInterface()
+{
+
 }
 
 void ForceTorqueSensorHardwareInterface::getROSParams()
 {
-    std::string SerialNumber;
+    std::string serial_number;
     if (nh_.hasParam("serial_number"))
     {
-        nh_.getParam("serial_number", SerialNumber);
+        nh_.getParam("serial_number", serial_number);
     }
 
     else
@@ -79,7 +83,7 @@ void ForceTorqueSensorHardwareInterface::getROSParams()
     }
 
 
-    serial_number_ = SerialNumber;
+    serial_number_ = serial_number;
     arm_name_ = arm_name;
 }
 
@@ -95,28 +99,46 @@ void ForceTorqueSensorHardwareInterface::registerHandles(hardware_interface::For
 
 bool ForceTorqueSensorHardwareInterface::connect()
 {
-    return ft_sensor_->Init();
+    bool ret = init(serial_number_, arm_name_);
+
+    if(ret)
+    {
+        written_ = false;
+    }
+
+    return ret;
 }
 
-bool ForceTorqueSensorHardwareInterface::disconnect()
-{
-    ft_sensor_->Disconnect();
-    return true;
-}
 
 void ForceTorqueSensorHardwareInterface::read()
 {
-    if(ft_sensor_->isInitialized())
+    if(isInitialized() && written_)
     {
+        bool ret = readFT(force_, torque_);
 
+        if(!ret)
+        {
+            ROS_ERROR("Error reading %s arm FT sensor", arm_name_.c_str());
+        }
     }
 }
 
 
 void ForceTorqueSensorHardwareInterface::write()
 {
-    if(ft_sensor_->isInitialized())
+    if(isInitialized())
     {
+        bool ret = requestFT();
+
+        if(ret)
+        {
+            written_ = true;
+        }
+
+        else
+        {
+            ROS_ERROR("Error requesting FT measurement %s arm", arm_name_.c_str());
+        }
 
     }
 

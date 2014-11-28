@@ -45,12 +45,14 @@
 namespace dumbo_hardware_interface
 {
 
-class ForceTorqueSensorHardwareInterface
+class ForceTorqueSensorHardwareInterface : public ForceTorqueSensor
 {
 
 public:
 
     ForceTorqueSensorHardwareInterface(const ros::NodeHandle &nh);
+
+    ~ForceTorqueSensorHardwareInterface();
 
     void getROSParams();
 
@@ -77,11 +79,10 @@ private:
     std::vector<double> force_;
     std::vector<double> torque_;
 
-    // class for low level force-torque sensor interface
-    boost::scoped_ptr<ForceTorqueSensor> ft_sensor_;
-
     std::string serial_number_;
     std::string arm_name_;
+
+    bool written_;
 };
 
 }
