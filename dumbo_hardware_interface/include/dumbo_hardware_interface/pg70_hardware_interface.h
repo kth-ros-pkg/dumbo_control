@@ -77,13 +77,13 @@ class PG70HardwareInterface : public PG70Gripper
     void read(bool wait_for_response=false);
 
     // execute joint velocity commands
-    // TODO: how to switch/execute position commands from /command_pos topic
     void writeVel();
 
     // execute joint position command
     void writePos();
 
 private:
+
 
     // ros stuff
     ros::NodeHandle nh_; // should be in "PG70_controller" namespace
@@ -97,6 +97,7 @@ private:
     std::vector<double> joint_velocity_command_;
     std::vector<double> joint_position_command_;
 
+    bool written_;
 
 };
 

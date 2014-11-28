@@ -44,7 +44,7 @@ PG70HardwareInterface::PG70HardwareInterface(const ros::NodeHandle &nh,
                                              boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                                              boost::shared_ptr<canHandle> CAN_handle) :
     PG70Gripper(CAN_mutex, CAN_handle),
-    nh_(nh)
+    nh_(nh), written_(false)
 {
     params_.reset(new PowerCubeCtrlParams());
 
@@ -243,8 +243,9 @@ void PG70HardwareInterface::registerHandles(hardware_interface::JointStateInterf
                                             hardware_interface::PositionJointInterface &pj_interface)
 {
     // initialize joint state and commands
-    unsigned int dof = 2;
     joint_names_ = params_->GetJointNames();
+
+    unsigned int dof = joint_names_.size();
     joint_positions_ = std::vector<double>(dof, 0.0);
     joint_velocities_ = std::vector<double>(dof, 0.0);
     joint_efforts_ = std::vector<double>(dof, 0.0);
@@ -280,7 +281,8 @@ bool PG70HardwareInterface::connect()
     // reset joint variables
     if(ret)
     {
-          unsigned int dof = 2;
+        written_ = false;
+        unsigned int dof = 2;
         joint_positions_[0] = getPositions()[0]/2.0;
         joint_positions_[1] = getPositions()[0]/2.0;
         joint_velocities_ = std::vector<double>(dof, 0.0);
@@ -298,18 +300,33 @@ void PG70HardwareInterface::read(bool wait_for_response)
 {
     if(isInitialized())
     {
-        bool ret = PowerCubeCtrl::readState(0, wait_for_response);
-
-        if(!ret)
+        // velocity control mode, read feedback status message
+        if(written_ && !executingPosCommand())
         {
-            ROS_ERROR("Error reading status message of PG70 gripper on %s arm.", params_->getArmName().c_str());
-            return;
+            bool ret = PowerCubeCtrl::readState(0, wait_for_response);
+            written_ = false;
+
+            if(!ret)
+            {
+                ROS_ERROR("Error reading status message of PG70 gripper on %s arm.", params_->getArmName().c_str());
+                return;
+            }
+
+            joint_positions_[0] = getPositions()[0]/2.0;
+            joint_positions_[1] = getPositions()[0]/2.0;
+            joint_velocities_[0] = getVelocities()[0];
+            joint_velocities_[1] = getVelocities()[0];
         }
 
-        joint_positions_[0] = getPositions()[0]/2.0;
-        joint_positions_[1] = getPositions()[0]/2.0;
-        joint_velocities_[0] = getVelocities()[0];
-        joint_velocities_[1] = getVelocities()[0];
+        // if executing a position command, then read status
+        if(!written_ && executingPosCommand())
+        {
+            bool ret = updateStates();
+            joint_positions_[0] = getPositions()[0]/2.0;
+            joint_positions_[1] = getPositions()[0]/2.0;
+            joint_velocities_[0] = getVelocities()[0];
+            joint_velocities_[1] = getVelocities()[0];
+        }
     }
 
 }
@@ -317,7 +334,8 @@ void PG70HardwareInterface::read(bool wait_for_response)
 
 void PG70HardwareInterface::writeVel()
 {
-    if(isInitialized())
+    // send velocity commands as long as position command is not being executed
+    if(isInitialized() && !executingPosCommand())
     {
         bool ret = PowerCubeCtrl::moveVel(joint_velocity_command_[0], 0, false);
 
@@ -326,6 +344,8 @@ void PG70HardwareInterface::writeVel()
             ROS_ERROR("Error executing velocity command on PG70 gripper on %s arm", params_->getArmName().c_str());
             return;
         }
+
+        written_ = true;
     }
 }
 
@@ -333,6 +353,13 @@ void PG70HardwareInterface::writePos()
 {
     if(isInitialized())
     {
+        // clear the CAN bus first
+        if(written_)
+        {
+            read();
+        }
+
+        // execute position command
         bool ret = movePos(joint_position_command_[0]);
 
         if (!ret)
