@@ -116,10 +116,12 @@ void ForceTorqueSensorHardwareInterface::read()
     {
         bool ret = readFT(force_, torque_);
 
+        written_ = false;
         if(!ret)
         {
             ROS_ERROR("Error reading %s arm FT sensor", arm_name_.c_str());
         }
+
     }
 }
 
