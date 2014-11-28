@@ -298,7 +298,13 @@ void PG70HardwareInterface::writeVel()
 {
     if(isInitialized())
     {
-        PowerCubeCtrl::moveVel(joint_velocity_command_[0], 0, false);
+        bool ret = PowerCubeCtrl::moveVel(joint_velocity_command_[0], 0, false);
+
+        if(!ret)
+        {
+            ROS_ERROR("Error executing velocity command on PG70 gripper on %s arm", params_->getArmName().c_str());
+            return;
+        }
     }
 }
 
@@ -306,11 +312,15 @@ void PG70HardwareInterface::writePos()
 {
     if(isInitialized())
     {
-        double pos;
+        bool ret = movePos(joint_position_command_[0]);
+
+        if (!ret)
+        {
+            ROS_ERROR("Error executing position command on PG70 gripper", params_->getArmName().c_str());
+            return;
+        }
     }
 }
-
-
 
 
 }
