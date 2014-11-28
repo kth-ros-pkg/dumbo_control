@@ -66,6 +66,13 @@ class PG70HardwareInterface : public PG70Gripper
                          hardware_interface::VelocityJointInterface &vj_interface,
                          hardware_interface::PositionJointInterface &pj_interface);
 
+    // connects to CAN bus (assumes schunk arm has been
+    // connected first
+    bool connect();
+
+    // disconnects from CAN bus
+    bool disconnect();
+
     // read joint positions from encoders
     void read(bool wait_for_response=false);
 

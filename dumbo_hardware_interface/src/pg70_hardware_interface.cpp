@@ -159,10 +159,10 @@ void PG70HardwareInterface::getROSParams()
     }
 
     /// get Gripper Max acceleration
-    int SerialNumber;
+    int serial_number;
     if (nh_.hasParam("serial_number"))
     {
-        nh_.getParam("serial_number", SerialNumber);
+        nh_.getParam("serial_number", serial_number);
     }
 
     else
@@ -175,7 +175,7 @@ void PG70HardwareInterface::getROSParams()
     params_->setArmName(arm_name);
     params_->SetJointNames(JointNames);
     params_->SetMaxAcc(MaxAccelerations);
-    params_->SetSerialNumber((unsigned long int) SerialNumber);
+    params_->SetSerialNumber((unsigned long int) serial_number);
 }
 
 
@@ -271,6 +271,27 @@ void PG70HardwareInterface::registerHandles(hardware_interface::JointStateInterf
                                         &joint_position_command_[i]));
 
     }
+}
+
+bool PG70HardwareInterface::connect()
+{
+    bool ret = init();
+
+    // reset joint variables
+    if(ret)
+    {
+          unsigned int dof = 2;
+        joint_positions_[0] = getPositions()[0]/2.0;
+        joint_positions_[1] = getPositions()[0]/2.0;
+        joint_velocities_ = std::vector<double>(dof, 0.0);
+        joint_efforts_ = std::vector<double>(dof, 0.0);
+    }
+
+}
+
+bool PG70HardwareInterface::disconnect()
+{
+    return close();
 }
 
 void PG70HardwareInterface::read(bool wait_for_response)
