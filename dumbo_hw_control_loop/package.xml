@@ -1,5 +1,5 @@
 <package>
-  <name>dumbo_control_loop</name>
+  <name>dumbo_hw_control_loop</name>
   <version>0.0.1</version>
   <description>
     Runs Dumbo's main low level hardware control loop (Schunk arms, parallel gripper and force-torque sensors) following the ros_control framework.
@@ -7,7 +7,7 @@
   <maintainer email="fevb@kth.se">Francisco Vina</maintainer>
   <license>BSD</license>
 
-  <url>http://wiki.ros.org/dumbo_control_loop</url>
+  <url>http://wiki.ros.org/dumbo_hw_control_loop</url>
 
   <author email="fevb@kth.se">Francisco Vina</author>
   <maintainer email="fevb@kth.se">Francisco Vina</maintainer>

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(dumbo_control_loop)
+project(dumbo_hw_control_loop)
 
 
 find_package(catkin REQUIRED COMPONENTS
