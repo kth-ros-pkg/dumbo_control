@@ -56,16 +56,26 @@ class DumboHardwareInterface : public hardware_interface::RobotHW
 {
 
 public:
+
+    boost::scoped_ptr<SchunkArmHardwareInterface> left_arm_hw_;
+    boost::scoped_ptr<SchunkArmHardwareInterface> right_arm_hw_;
+
+    boost::scoped_ptr<ForceTorqueSensorHardwareInterface> left_ft_sensor_hw_;
+    boost::scoped_ptr<ForceTorqueSensorHardwareInterface> right_ft_sensor_hw_;
+
+    boost::scoped_ptr<PG70HardwareInterface> pg70_hw_;
+
     DumboHardwareInterface();
 
     ~DumboHardwareInterface();
 
-    // register handles for ros_control HW interfaces
-    void registerHandles();
-
-    void connect();
+    bool connect();
 
     void disconnect();
+
+    void stop();
+
+    void recover();
 
     // read arms, gripper, ft sensors
     void read();
@@ -80,27 +90,20 @@ public:
     // requests ft measurements
     // send a position command to PG70
     // in this case do read&write in corresponding schunk arm
-    void write(double pos);
-
+    void write(double gripper_pos_command);
 
 
 
 private:
-    ros::NodeHandle nh_;
 
     //hardware interfaces
     hardware_interface::JointStateInterface js_interface_;
     hardware_interface::VelocityJointInterface vj_interface_;
     hardware_interface::PositionJointInterface pj_interface_;
-    hardware_interface::ForceTorqueSensorInterface ft_interface_;
+    hardware_interface::ForceTorqueSensorInterface ft_sensor_interface_;
 
-    boost::scoped_ptr<SchunkArmHardwareInterface> left_arm_hw_;
-    boost::scoped_ptr<SchunkArmHardwareInterface> right_arm_hw_;
-
-    boost::scoped_ptr<ForceTorqueSensorHardwareInterface> left_ft_hw_;
-    boost::scoped_ptr<ForceTorqueSensorHardwareInterface> right_ft_hw_;
-
-    boost::scoped_ptr<PG70HardwareInterface> pg70_hw_;
+    // register HW handles and interfaces for ros_control
+    void registerHW();
 
 };
 
