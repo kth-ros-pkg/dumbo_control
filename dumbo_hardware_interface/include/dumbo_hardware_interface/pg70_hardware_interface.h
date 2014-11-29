@@ -52,6 +52,8 @@ namespace dumbo_hardware_interface
 
 class PG70HardwareInterface : public PG70Gripper
 {
+
+ public:
     PG70HardwareInterface(const ros::NodeHandle &nh,
                           boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                           boost::shared_ptr<canHandle> CAN_handle);
@@ -74,13 +76,15 @@ class PG70HardwareInterface : public PG70Gripper
     bool disconnect();
 
     // read joint positions from encoders
-    void read(bool wait_for_response=false);
+    void read();
 
-    // execute joint velocity commands
-    void writeVel();
+    // execute joint velocity command
+    // reads status feedback message
+    void writeReadVel();
 
     // execute joint position command
-    void writePos();
+    // reads status feedback message
+    void writeReadPos();
 
 private:
 
@@ -96,8 +100,6 @@ private:
 
     std::vector<double> joint_velocity_command_;
     std::vector<double> joint_position_command_;
-
-    bool written_;
 
 };
 
