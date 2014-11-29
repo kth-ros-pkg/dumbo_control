@@ -91,7 +91,7 @@ public:
     void read(bool wait_for_response=false);
 
     // execute joint velocity command.
-    // sends to command to only one joint
+    // sends command to only one joint
     // Does not wait for status msg response, this msg
     // will be read by the read() function
     void write();
