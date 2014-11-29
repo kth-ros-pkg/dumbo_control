@@ -57,7 +57,7 @@ public:
     void getROSParams();
 
     // register force-torque sensor hardware interface handle for ros_control
-    void registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_interface);
+    void registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_sensor_interface);
 
     // connects to F/T sensor on CAN bus
     bool connect();

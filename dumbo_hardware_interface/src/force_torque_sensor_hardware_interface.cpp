@@ -88,9 +88,9 @@ void ForceTorqueSensorHardwareInterface::getROSParams()
 }
 
 
-void ForceTorqueSensorHardwareInterface::registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_interface)
+void ForceTorqueSensorHardwareInterface::registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_sensor_interface)
 {
-    ft_interface.registerHandle(hardware_interface::ForceTorqueSensorHandle(
+    ft_sensor_interface.registerHandle(hardware_interface::ForceTorqueSensorHandle(
                                     arm_name_+"_arm_ft_sensor",
                                     arm_name_+"_arm_ft_sensor",
                                     &(force_[0]),
@@ -141,9 +141,7 @@ void ForceTorqueSensorHardwareInterface::write()
         {
             ROS_ERROR("Error requesting FT measurement %s arm", arm_name_.c_str());
         }
-
     }
-
 }
 
 }
