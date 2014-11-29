@@ -1,5 +1,5 @@
 /*
- *  force_torque_sensor_hardware_interface.cpp
+ *  force_torque_sensor_hw.cpp
  *
  *  Dumbo's ATI 6-axis force-torque sensors hardware interface for ros_control
  *  Created on: Nov 21, 2014
@@ -33,13 +33,13 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <dumbo_hardware_interface/force_torque_sensor_hardware_interface.h>
+#include <dumbo_hardware_interface/force_torque_sensor_hw.h>
 
 
 namespace dumbo_hardware_interface
 {
 
-ForceTorqueSensorHardwareInterface::ForceTorqueSensorHardwareInterface(const ros::NodeHandle &nh) :
+ForceTorqueSensorHW::ForceTorqueSensorHW(const ros::NodeHandle &nh) :
     ForceTorqueSensor(),
     nh_(nh), written_(false)
 {
@@ -49,12 +49,12 @@ ForceTorqueSensorHardwareInterface::ForceTorqueSensorHardwareInterface(const ros
     getROSParams();
 }
 
-ForceTorqueSensorHardwareInterface::~ForceTorqueSensorHardwareInterface()
+ForceTorqueSensorHW::~ForceTorqueSensorHW()
 {
 
 }
 
-void ForceTorqueSensorHardwareInterface::getROSParams()
+void ForceTorqueSensorHW::getROSParams()
 {
     std::string serial_number;
     if (nh_.hasParam("serial_number"))
@@ -88,7 +88,7 @@ void ForceTorqueSensorHardwareInterface::getROSParams()
 }
 
 
-void ForceTorqueSensorHardwareInterface::registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_sensor_interface)
+void ForceTorqueSensorHW::registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_sensor_interface)
 {
     ft_sensor_interface.registerHandle(hardware_interface::ForceTorqueSensorHandle(
                                     arm_name_+"_arm_ft_sensor",
@@ -97,7 +97,7 @@ void ForceTorqueSensorHardwareInterface::registerHandles(hardware_interface::For
                                     &(torque_[0])));
 }
 
-bool ForceTorqueSensorHardwareInterface::connect()
+bool ForceTorqueSensorHW::connect()
 {
     bool ret = init(serial_number_, arm_name_);
 
@@ -110,7 +110,7 @@ bool ForceTorqueSensorHardwareInterface::connect()
 }
 
 
-void ForceTorqueSensorHardwareInterface::read()
+void ForceTorqueSensorHW::read()
 {
     if(isInitialized() && written_)
     {
@@ -126,7 +126,7 @@ void ForceTorqueSensorHardwareInterface::read()
 }
 
 
-void ForceTorqueSensorHardwareInterface::write()
+void ForceTorqueSensorHW::write()
 {
     if(isInitialized())
     {

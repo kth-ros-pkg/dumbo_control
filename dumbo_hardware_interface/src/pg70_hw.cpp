@@ -1,5 +1,5 @@
 /*
- *  pg70_hardware_interface.cpp
+ *  pg70_hw.cpp
  *
  *  Schunk PG70 parallel gripper hardware interface for ros_control
  *  Created on: Nov 21, 2014
@@ -33,14 +33,14 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <dumbo_hardware_interface/pg70_hardware_interface.h>
+#include <dumbo_hardware_interface/pg70_hw.h>
 #include <urdf/model.h>
 
 
 namespace dumbo_hardware_interface
 {
 
-PG70HardwareInterface::PG70HardwareInterface(const ros::NodeHandle &nh,
+PG70HW::PG70HW(const ros::NodeHandle &nh,
                                              boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                                              boost::shared_ptr<canHandle> CAN_handle) :
     PG70Gripper(CAN_mutex, CAN_handle),
@@ -52,13 +52,13 @@ PG70HardwareInterface::PG70HardwareInterface(const ros::NodeHandle &nh,
     getRobotDescriptionParams();
 }
 
-PG70HardwareInterface::~PG70HardwareInterface()
+PG70HW::~PG70HW()
 {
 
 }
 
 
-void PG70HardwareInterface::getROSParams()
+void PG70HW::getROSParams()
 {
     /// get CanBaudrate
     int CanBaudrate;
@@ -179,7 +179,7 @@ void PG70HardwareInterface::getROSParams()
 }
 
 
-void PG70HardwareInterface::getRobotDescriptionParams()
+void PG70HW::getRobotDescriptionParams()
 {
     /// Get robot_description from ROS parameter server
     std::string param_name = "robot_description";
@@ -238,7 +238,7 @@ void PG70HardwareInterface::getRobotDescriptionParams()
     params_->SetMaxVel(MaxVel);
 }
 
-void PG70HardwareInterface::registerHandles(hardware_interface::JointStateInterface &js_interface,
+void PG70HW::registerHandles(hardware_interface::JointStateInterface &js_interface,
                                             hardware_interface::VelocityJointInterface &vj_interface,
                                             hardware_interface::PositionJointInterface &pj_interface)
 {
@@ -274,7 +274,7 @@ void PG70HardwareInterface::registerHandles(hardware_interface::JointStateInterf
     }
 }
 
-bool PG70HardwareInterface::connect()
+bool PG70HW::connect()
 {
     bool ret = init();
 
@@ -292,12 +292,12 @@ bool PG70HardwareInterface::connect()
     return false;
 }
 
-bool PG70HardwareInterface::disconnect()
+bool PG70HW::disconnect()
 {
     return close();
 }
 
-void PG70HardwareInterface::read()
+void PG70HW::read()
 {
     if(isInitialized())
     {
@@ -324,7 +324,7 @@ void PG70HardwareInterface::read()
 }
 
 
-void PG70HardwareInterface::writeReadVel()
+void PG70HW::writeReadVel()
 {
     // send velocity commands as long as position command is not being executed
     if(isInitialized() && !executingPosCommand())
@@ -339,7 +339,7 @@ void PG70HardwareInterface::writeReadVel()
     }
 }
 
-void PG70HardwareInterface::writeReadPos()
+void PG70HW::writeReadPos()
 {
     if(isInitialized())
     {

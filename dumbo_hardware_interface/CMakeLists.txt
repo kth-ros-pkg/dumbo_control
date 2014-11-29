@@ -16,7 +16,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS roscpp hardware_interface dumbo_powercube_chain dumbo_force_torque_sensor
-  LIBRARIES dumbo_hardware_interface  
+  LIBRARIES dumbo_hw
   DEPENDS
 )
 
@@ -26,16 +26,16 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
 )
 
-add_library(dumbo_hardware_interface 
-  src/dumbo_hardware_interface.cpp 
-  src/schunk_arm_hardware_interface.cpp 
-  src/pg70_hardware_interface.cpp 
-  src/force_torque_sensor_hardware_interface.cpp)
+add_library(dumbo_hw 
+  src/dumbo_hw.cpp 
+  src/schunk_arm_hw.cpp 
+  src/pg70_hw.cpp 
+  src/force_torque_sensor_hw.cpp)
 
-target_link_libraries(dumbo_hardware_interface ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(dumbo_hw ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 
-install(TARGETS dumbo_hardware_interface
+install(TARGETS dumbo_hw
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

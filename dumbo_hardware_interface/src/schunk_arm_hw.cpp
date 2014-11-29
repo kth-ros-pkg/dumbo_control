@@ -1,5 +1,5 @@
 /*
- *  schunk_arm_hardware_interface.cpp
+ *  schunk_arm_hw.cpp
  *
  *  Schunk 7 DOF arm hardware interface for ros_control
  *  Created on: Nov 21, 2014
@@ -33,13 +33,13 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <dumbo_hardware_interface/schunk_arm_hardware_interface.h>
+#include <dumbo_hardware_interface/schunk_arm_hw.h>
 #include <urdf/model.h>
 
 namespace dumbo_hardware_interface
 {
 
-SchunkArmHardwareInterface::SchunkArmHardwareInterface(const ros::NodeHandle &nh,
+SchunkArmHW::SchunkArmHW(const ros::NodeHandle &nh,
                                                        boost::shared_ptr<pthread_mutex_t> CAN_mutex,
                                                        boost::shared_ptr<canHandle> CAN_handle) :
     PowerCubeCtrl(CAN_mutex, CAN_handle),
@@ -53,11 +53,11 @@ SchunkArmHardwareInterface::SchunkArmHardwareInterface(const ros::NodeHandle &nh
     getRobotDescriptionParams();
 }
 
-SchunkArmHardwareInterface::~SchunkArmHardwareInterface()
+SchunkArmHW::~SchunkArmHW()
 {
 }
 
-void SchunkArmHardwareInterface::getROSParams()
+void SchunkArmHW::getROSParams()
 {
     /// get CanBaudrate
     int CanBaudrate;
@@ -203,7 +203,7 @@ void SchunkArmHardwareInterface::getROSParams()
 
 }
 
-void SchunkArmHardwareInterface::getRobotDescriptionParams()
+void SchunkArmHW::getRobotDescriptionParams()
 {
     unsigned int DOF = params_->GetDOF();
     std::vector<std::string> JointNames = params_->GetJointNames();
@@ -284,7 +284,7 @@ void SchunkArmHardwareInterface::getRobotDescriptionParams()
 
 
 
-void SchunkArmHardwareInterface::registerHandles(hardware_interface::JointStateInterface &js_interface,
+void SchunkArmHW::registerHandles(hardware_interface::JointStateInterface &js_interface,
                                                  hardware_interface::VelocityJointInterface &vj_interface)
 {
     // initialize joint state and commands
@@ -314,7 +314,7 @@ void SchunkArmHardwareInterface::registerHandles(hardware_interface::JointStateI
 
 }
 
-bool SchunkArmHardwareInterface::connect()
+bool SchunkArmHW::connect()
 {
     bool ret = init();
 
@@ -340,12 +340,12 @@ bool SchunkArmHardwareInterface::connect()
 }
 
 
-bool SchunkArmHardwareInterface::disconnect()
+bool SchunkArmHW::disconnect()
 {
     return close();
 }
 
-void SchunkArmHardwareInterface::read(bool wait_for_response)
+void SchunkArmHW::read(bool wait_for_response)
 {
     // read the joint positions and velocities and store them in the buffer
     if(isInitialized())
@@ -370,7 +370,7 @@ void SchunkArmHardwareInterface::read(bool wait_for_response)
 
 }
 
-void SchunkArmHardwareInterface::write()
+void SchunkArmHW::write()
 {
 
     if(isInitialized())
@@ -392,7 +392,7 @@ void SchunkArmHardwareInterface::write()
     }
 }
 
-void SchunkArmHardwareInterface::writeAndRead()
+void SchunkArmHW::writeAndRead()
 {
     if(isInitialized())
     {

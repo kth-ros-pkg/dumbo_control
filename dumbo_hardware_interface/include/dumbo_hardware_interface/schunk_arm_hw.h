@@ -1,7 +1,7 @@
 /*
- *  pg70_hardware_interface.h
+ *  schunk_arm_hw.h
  *
- *  Schunk PG70 parallel gripper hardware interface for ros_control
+ *  Schunk 7 DOF arm hardware interface for ros_control
  *  Created on: Nov 21, 2014
  *  Authors:   Francisco Viña
  *            fevb <at> kth.se
@@ -34,63 +34,89 @@
 */
 
 
-#ifndef PG70_HARDWARE_INTERFACE_H_
-#define PG70_HARDWARE_INTERFACE_H_
+#ifndef SCHUNK_ARM_HW_H_
+#define SCHUNK_ARM_HW_H_
 
 #include <ros/ros.h>
 #include <hardware_interface/joint_state_interface.h>
 #include <hardware_interface/joint_command_interface.h>
-#include <dumbo_powercube_chain/PG70Gripper.h>
+#include <dumbo_powercube_chain/PowerCubeCtrl.h>
 #include <dumbo_powercube_chain/PowerCubeCtrlParams.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <pthread.h>
 #include <kvaser_canlib/canlib.h>
-#include <cob_srvs/Trigger.h>
 
 namespace dumbo_hardware_interface
 {
 
-class PG70HardwareInterface : public PG70Gripper
+class SchunkArmHW : public PowerCubeCtrl
 {
 
- public:
-    PG70HardwareInterface(const ros::NodeHandle &nh,
-                          boost::shared_ptr<pthread_mutex_t> CAN_mutex,
-                          boost::shared_ptr<canHandle> CAN_handle);
+public:
 
-    ~PG70HardwareInterface();
+    // nodehandle for getting ROS parameters and setting up services
+    // CAN mutex and handles in case the arm shares CAN bus with e.g.
+    // a gripper
+    SchunkArmHW(const ros::NodeHandle &nh,
+                               boost::shared_ptr<pthread_mutex_t> CAN_mutex,
+                               boost::shared_ptr<canHandle> CAN_handle);
 
+    ~SchunkArmHW();
+
+    // gets ROS parameters including joint names,
+    // CAN parameters, etc.
     void getROSParams();
 
+    // get parameters related to robot joints, i.e.,
+    // min/max joint positions, velocities, etc.
     void getRobotDescriptionParams();
 
+    // registers hardware interface handles for joint states and
+    // joint velocity commands
     void registerHandles(hardware_interface::JointStateInterface &js_interface,
-                         hardware_interface::VelocityJointInterface &vj_interface,
-                         hardware_interface::PositionJointInterface &pj_interface);
+                         hardware_interface::VelocityJointInterface &vj_interface);
 
-    // connects to CAN bus (assumes schunk arm has been
-    // connected first
+    // connects to arm on CAN bus
     bool connect();
 
-    // disconnects from CAN bus
+    // disconnects arm from CAN bus
     bool disconnect();
 
     // read joint positions from encoders
-    void read();
+    // reads only one module
+    // If wait_for_response==True then it performs a blocking CAN read call
+    // (it waits until a msg has arrived)
+    // It assumes that a write() call was made in the previous iteration
+    void read(bool wait_for_response=false);
 
-    // execute joint velocity command
-    // reads status feedback message
-    void writeReadVel();
+    // execute joint velocity command.
+    // sends command to only one joint
+    // Does not wait for status msg response, this msg
+    // will be read by the read() function
+    void write();
 
-    // execute joint position command
-    // reads status feedback message
-    void writeReadPos();
+    // writes command to a module and waits for its status message
+    // reply over the CAN bus
+    void writeAndRead();
+
 
 private:
 
-
     // ros stuff
-    ros::NodeHandle nh_; // should be in "PG70_controller" namespace
+    ros::NodeHandle nh_;
+
+    std::string arm_name_; // "left" or "right"
+
+    // current module being controlled
+    // -1: no command has been sent to a module
+    // 1-7: a command has been set to this module
+    int module_number_;
+
+    // indicates if a write() has been performed, helps for
+    // sync of read() and write(). In such case the read()
+    // will receive the status response from the module
+    bool written_;
 
     // arm parameters and variables for hardware handles
     std::vector<std::string> joint_names_;
@@ -99,12 +125,9 @@ private:
     std::vector<double> joint_efforts_;
 
     std::vector<double> joint_velocity_command_;
-    std::vector<double> joint_position_command_;
-
 };
 
 }
-
 
 
 #endif

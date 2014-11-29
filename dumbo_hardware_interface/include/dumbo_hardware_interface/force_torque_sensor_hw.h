@@ -1,8 +1,8 @@
 /*
- *  dumbo_hardware_interface.h
+ *  force_torque_sensor_hw.h
  *
- *  Dumbo hardware interface for the ros_control framework
- *  Created on: Nov 20, 2014
+ *  Dumbo's ATI 6-axis force-torque sensors hardware interface for ros_control
+ *  Created on: Nov 21, 2014
  *  Authors:   Francisco Viña
  *            fevb <at> kth.se
  */
@@ -33,80 +33,57 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef FORCE_TORQUE_SENSOR_HW_H_
+#define FORCE_TORQUE_SENSOR_HW_H_
 
-#ifndef DUMBO_HARDWARE_INTERFACE_H_
-#define DUMBO_HARDWARE_INTERFACE_H_
 
 #include <ros/ros.h>
-#include <hardware_interface/robot_hw.h>
-#include <hardware_interface/joint_state_interface.h>
-#include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/force_torque_sensor_interface.h>
-
-#include <dumbo_hardware_interface/schunk_arm_hardware_interface.h>
-#include <dumbo_hardware_interface/pg70_hardware_interface.h>
-#include <dumbo_hardware_interface/force_torque_sensor_hardware_interface.h>
-
+#include <dumbo_force_torque_sensor/ForceTorqueSensor.h>
 #include <boost/scoped_ptr.hpp>
 
 namespace dumbo_hardware_interface
 {
 
-class DumboHardwareInterface : public hardware_interface::RobotHW
+class ForceTorqueSensorHW : public ForceTorqueSensor
 {
 
 public:
 
-    boost::scoped_ptr<SchunkArmHardwareInterface> left_arm_hw_;
-    boost::scoped_ptr<SchunkArmHardwareInterface> right_arm_hw_;
+    ForceTorqueSensorHW(const ros::NodeHandle &nh);
 
-    boost::scoped_ptr<ForceTorqueSensorHardwareInterface> left_ft_sensor_hw_;
-    boost::scoped_ptr<ForceTorqueSensorHardwareInterface> right_ft_sensor_hw_;
+    ~ForceTorqueSensorHW();
 
-    boost::scoped_ptr<PG70HardwareInterface> pg70_hw_;
+    void getROSParams();
 
-    DumboHardwareInterface();
+    // register force-torque sensor hardware interface handle for ros_control
+    void registerHandles(hardware_interface::ForceTorqueSensorInterface &ft_sensor_interface);
 
-    ~DumboHardwareInterface();
-
+    // connects to F/T sensor on CAN bus
     bool connect();
 
-    void disconnect();
+    // disconnects from F/T sensor on CAN bus
+    bool disconnect();
 
-    void stop();
-
-    void recover();
-
-    // read arms, gripper, ft sensors
+    // read force-torque measurement from CAN bus
     void read();
 
-    // sends velocity commands to arms
-    // requests ft measurements
-    // if PG70 is in velocity mode
-    // send velocity commands to it
+    // request new force-torque measurement via CAN bus
     void write();
-
-    // sends velocity commands to arms
-    // requests ft measurements
-    // send a position command to PG70
-    // in this case do read&write in corresponding schunk arm
-    void write(double gripper_pos_command);
-
 
 
 private:
+    ros::NodeHandle nh_;
 
-    //hardware interfaces
-    hardware_interface::JointStateInterface js_interface_;
-    hardware_interface::VelocityJointInterface vj_interface_;
-    hardware_interface::PositionJointInterface pj_interface_;
-    hardware_interface::ForceTorqueSensorInterface ft_sensor_interface_;
+    // buffers for force/torque
+    std::vector<double> force_;
+    std::vector<double> torque_;
 
-    // register HW handles and interfaces for ros_control
-    void registerHW();
+    std::string serial_number_;
+    std::string arm_name_;
 
+    bool written_;
 };
-
 
 }
 

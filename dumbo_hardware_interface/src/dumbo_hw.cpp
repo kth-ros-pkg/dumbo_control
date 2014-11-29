@@ -1,5 +1,5 @@
 /*
- *  dumbo_hardware_interface.cpp
+ *  dumbo_hw.cpp
  *
  *  Dumbo hardware interface for the ros_control framework
  *  Created on: Nov 20, 2014
@@ -33,12 +33,12 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <dumbo_hardware_interface/dumbo_hardware_interface.h>
+#include <dumbo_hardware_interface/dumbo_hw.h>
 
 
 namespace dumbo_hardware_interface
 {
-DumboHardwareInterface::DumboHardwareInterface()
+DumboHW::DumboHW()
 {
 
     boost::shared_ptr<pthread_mutex_t> left_arm_CAN_mutex(new pthread_mutex_t);
@@ -46,11 +46,11 @@ DumboHardwareInterface::DumboHardwareInterface()
 
     boost::shared_ptr<canHandle> left_arm_CAN_handle(new canHandle(0));
 
-    left_arm_hw_.reset(new SchunkArmHardwareInterface(ros::NodeHandle("/left_arm"),
+    left_arm_hw.reset(new SchunkArmHW(ros::NodeHandle("/left_arm"),
                                                       left_arm_CAN_mutex,
                                                       left_arm_CAN_handle));
 
-    pg70_hw_.reset(new PG70HardwareInterface(ros::NodeHandle("/PG70_gripper"),
+    pg70_hw.reset(new PG70HW(ros::NodeHandle("/PG70_gripper"),
                                              left_arm_CAN_mutex,
                                              left_arm_CAN_handle));
 
@@ -59,45 +59,45 @@ DumboHardwareInterface::DumboHardwareInterface()
     *right_arm_CAN_mutex = PTHREAD_MUTEX_INITIALIZER;
     boost::shared_ptr<canHandle> right_arm_CAN_handle(new canHandle(0));
 
-    right_arm_hw_.reset(new SchunkArmHardwareInterface(ros::NodeHandle("/right_arm"),
+    right_arm_hw.reset(new SchunkArmHW(ros::NodeHandle("/right_arm"),
                                                       right_arm_CAN_mutex,
                                                       right_arm_CAN_handle));
 
-    left_ft_sensor_hw_.reset(new ForceTorqueSensorHardwareInterface(ros::NodeHandle("/left_arm_ft_sensor")));
-    right_ft_sensor_hw_.reset(new ForceTorqueSensorHardwareInterface(ros::NodeHandle("/right_arm_ft_sensor")));
+    left_ft_sensor_hw.reset(new ForceTorqueSensorHW(ros::NodeHandle("/left_arm_ft_sensor")));
+    right_ft_sensor_hw.reset(new ForceTorqueSensorHW(ros::NodeHandle("/right_arm_ft_sensor")));
 
     // register hardware interfaces
     registerHW();
 }
 
 
-bool DumboHardwareInterface::connect()
+bool DumboHW::connect()
 {
-    if(!left_arm_hw_->connect())
+    if(!left_arm_hw->connect())
     {
         ROS_ERROR("Error connecting to left arm");
         return false;
     }
 
-    if(!right_arm_hw_->connect())
+    if(!right_arm_hw->connect())
     {
         ROS_ERROR("Error connecting to right arm");
         return false;
     }
 
-    if(!pg70_hw_->connect())
+    if(!pg70_hw->connect())
     {
         ROS_ERROR("Error connecting to PG70 gripper");
         return false;
     }
 
-    if(!left_ft_sensor_hw_->connect())
+    if(!left_ft_sensor_hw->connect())
     {
         ROS_ERROR("Error connecting left arm FT sensor");
         return false;
     }
 
-    if(!right_ft_sensor_hw_->connect())
+    if(!right_ft_sensor_hw->connect())
     {
         ROS_ERROR("Error connecting right arm FT sensor");
         return false;
@@ -105,52 +105,52 @@ bool DumboHardwareInterface::connect()
 }
 
 
-void DumboHardwareInterface::disconnect()
+void DumboHW::disconnect()
 {
-    left_arm_hw_->disconnect();
-    right_arm_hw_->disconnect();
-    pg70_hw_->disconnect();
-    left_ft_sensor_hw_->disconnect();
-    right_ft_sensor_hw_->disconnect();
+    left_arm_hw->disconnect();
+    right_arm_hw->disconnect();
+    pg70_hw->disconnect();
+    left_ft_sensor_hw->disconnect();
+    right_ft_sensor_hw->disconnect();
 }
 
 
-void DumboHardwareInterface::stop()
+void DumboHW::stop()
 {
-    left_arm_hw_->stop();
-    right_arm_hw_->stop();
+    left_arm_hw->stop();
+    right_arm_hw->stop();
 }
 
-void DumboHardwareInterface::recover()
+void DumboHW::recover()
 {
-    left_arm_hw_->recover();
-    right_arm_hw_->recover();
-    pg70_hw_->recover();
+    left_arm_hw->recover();
+    right_arm_hw->recover();
+    pg70_hw->recover();
 }
 
-void DumboHardwareInterface::read()
+void DumboHW::read()
 {
-    left_arm_hw_->read();
-    right_arm_hw_->read();
+    left_arm_hw->read();
+    right_arm_hw->read();
 
-    pg70_hw_->read();
+    pg70_hw->read();
 
-    left_ft_sensor_hw_->read();
-    right_ft_sensor_hw_->read();
+    left_ft_sensor_hw->read();
+    right_ft_sensor_hw->read();
 }
 
-void DumboHardwareInterface::write()
+void DumboHW::write()
 {
-    pg70_hw_->writeReadVel();
+    pg70_hw->writeReadVel();
 
-    left_arm_hw_->write();
-    right_arm_hw_->write();
+    left_arm_hw->write();
+    right_arm_hw->write();
 
-    left_ft_sensor_hw_->write();
-    right_ft_sensor_hw_->write();
+    left_ft_sensor_hw->write();
+    right_ft_sensor_hw->write();
 }
 
-void DumboHardwareInterface::write(double gripper_pos_command)
+void DumboHW::write(double gripper_pos_command)
 {
     // set gripper pos command on hardware interface
     hardware_interface::JointHandle pg70_joint_handle = pj_interface_.getHandle("left_arm_top_finger_joint");
@@ -160,29 +160,29 @@ void DumboHardwareInterface::write(double gripper_pos_command)
     pg70_joint_handle2.setCommand(gripper_pos_command);
 
     // send position command to PG70
-    pg70_hw_->writeReadPos();
+    pg70_hw->writeReadPos();
 
-    left_arm_hw_->write();
-    right_arm_hw_->write();
+    left_arm_hw->write();
+    right_arm_hw->write();
 
-    left_ft_sensor_hw_->write();
-    right_ft_sensor_hw_->write();
+    left_ft_sensor_hw->write();
+    right_ft_sensor_hw->write();
 }
 
-void DumboHardwareInterface::registerHW()
+void DumboHW::registerHW()
 {
     // register the handles
-    left_arm_hw_->registerHandles(js_interface_,
+    left_arm_hw->registerHandles(js_interface_,
                                   vj_interface_);
-    right_arm_hw_->registerHandles(js_interface_,
+    right_arm_hw->registerHandles(js_interface_,
                                    vj_interface_);
 
-    pg70_hw_->registerHandles(js_interface_,
+    pg70_hw->registerHandles(js_interface_,
                               vj_interface_,
                               pj_interface_);
 
-    left_ft_sensor_hw_->registerHandles(ft_sensor_interface_);
-    right_ft_sensor_hw_->registerHandles(ft_sensor_interface_);
+    left_ft_sensor_hw->registerHandles(ft_sensor_interface_);
+    right_ft_sensor_hw->registerHandles(ft_sensor_interface_);
 
 
     // register the interfaces
