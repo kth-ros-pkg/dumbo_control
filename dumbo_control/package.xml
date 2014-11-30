@@ -15,6 +15,7 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <run_depend>dumbo_hardware_interface</run_depend>
+  <run_depend>dumbo_hw_control_loop</run_depend>
 
   <export>
     <metapackage/>
