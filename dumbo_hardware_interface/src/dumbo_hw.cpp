@@ -70,6 +70,11 @@ DumboHW::DumboHW()
     registerHW();
 }
 
+DumboHW::~DumboHW()
+{
+
+}
+
 
 bool DumboHW::connect()
 {
