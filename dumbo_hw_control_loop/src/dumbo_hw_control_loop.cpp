@@ -38,7 +38,10 @@
 #include <dumbo_hardware_interface/dumbo_hw.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <std_srvs/Empty.h>
+#include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
+#include <control_msgs/GripperCommand.h>
+#include <boost/scoped_ptr.hpp>
 
 namespace dumbo_control
 {
@@ -46,92 +49,171 @@ class DumboHWControlLoop
 {
 public:
 
-    DumboHWControlLoop()
+    // thread variables for realtime control loop
+    pthread_t controlThread;
+    pthread_attr_t controlThreadAttr;
+
+    DumboHWControlLoop():
+        connect_dumbo_(false),
+        disconnect_dumbo_(false),
+        stop_dumbo_(false),
+        recover_dumbo_(false),
+        connect_left_arm_(false),
+        disconnect_left_arm_(false),
+        connect_right_arm_(false),
+        disconnect_right_arm_(false),
+        connect_pg70_(false),
+        disconnect_pg70_(false)
     {
         nh_ = ros::NodeHandle("~");
-        registerServices();
 
-        // start realtime thread loop
+        advertiseServices();
+        advertiseTopics();
+
+        // subscribe to gripper pos command
+        pg70_pos_command_sub_ = nh_.advertise("/PG70_gripper/pos_command");
+
+        // start realtime hw control loop thread
+        int rv;
+        if ((rv = pthread_create(&controlThread, &controlThreadAttr, DumboHWControlLoop::controlLoop, 0)) != 0)
+        {
+          ROS_FATAL("Unable to create control thread: rv = %d", rv);
+          exit(EXIT_FAILURE);
+        }
+
     }
 
     ~DumboHWControlLoop()
     {
     }
 
-    void registerServices()
+    void advertiseServices()
     {
 
+        connect_dumbo_srv_server_ = nh_.advertiseService("/dumbo/connect", &DumboHWControlLoop::connectDumboSrvCallback, this);
+        disconnect_dumbo_srv_server_ = nh_.advertiseService("/dumbo/disconnect", &DumboHWControlLoop::disconnectDumboSrvCallback, this);
+
+        stop_dumbo_srv_server_ = nh_.advertiseService("/dumbo/stop", &DumboHWControlLoop::stopDumboSrvCallback, this);
+        recover_dumbo_srv_server_ = nh_.advertiseService("/dumbo/recover", &DumboHWControlLoop::recoverDumboSrvCallback, this);
+
+        connect_left_arm_srv_server_ = nh_.advertiseService("/left_arm/connect", &DumboHWControlLoop::connectLeftArmSrvCallback, this);
+        disconnect_left_arm_srv_server_ = nh_.advertiseService("/left_arm/disconnect", &DumboHWControlLoop::disconnectLeftArmSrvCallback, this);
+
+        connect_right_arm_srv_server_ = nh_.advertiseService("/right_arm/connect", &DumboHWControlLoop::connectRightArmSrvCallback, this);
+        disconnect_right_arm_srv_server_ = nh_.advertiseService("/right_arm/disconnect", &DumboHWControlLoop::disconnectRightArmSrvCallback, this);
+
+        connect_pg70_srv_server_ = nh_.advertiseService("/PG70_gripper/connect", &DumboHWControlLoop::connectPG70SrvCallback, this);
+        disconnect_pg70_srv_server_ = nh_.advertiseService("/PG70_gripper/disconnect", &DumboHWControlLoop::disconnectPG70SrvCallback, this);
+    }
+
+    void advertiseTopics()
+    {
+        left_arm_status_publisher_.reset(new realtime_tools::RealtimePublisher<std_msgs::Bool>(nh_, "/left_arm/connected", 1));
+        right_arm_status_publisher_.reset(new realtime_tools::RealtimePublisher<std_msgs::Bool>(nh_, "/right_arm/connected", 1));
+
+        pg70_status_publisher_.reset(new realtime_tools::RealtimePublisher<std_msgs::Bool>(nh_, "/PG70_gripper/connected", 1));
+
+        left_arm_ft_sensor_status_publisher_.reset(new realtime_tools::RealtimePublisher<std_msgs::Bool>(nh_, "/left_arm_ft_sensor/connected", 1));
+        right_arm_ft_sensor_status_publisher_.reset(new realtime_tools::RealtimePublisher<std_msgs::Bool>(nh_, "/right_arm_ft_sensor/connected", 1));
     }
 
     // service callback definitions
 
-    bool dumboConnectSrvCallback(std_srvs::Empty::Request &req,
+    bool connectDumboSrvCallback(std_srvs::Empty::Request &req,
                                  std_srvs::Empty::Response &res)
     {
         connect_dumbo_ = true;
     }
 
-    bool dumboDisconnectSrvCallback(std_srvs::Empty::Request &req,
+    bool disconnectDumboSrvCallback(std_srvs::Empty::Request &req,
                                     std_srvs::Empty::Response &res)
     {
         disconnect_dumbo_ = true;
     }
 
-    bool leftArmConnectSrvCallback(std_srvs::Empty::Request &req,
+    bool stopDumboSrvCallback(std_srvs::Empty::Request &req,
+                              std_srvs::Empty::Response &res)
+    {
+        stop_dumbo_ = true;
+    }
+
+    bool recoverDumboSrvCallback(std_srvs::Empty::Request &req,
+                                 std_srvs::Empty::Response &res)
+    {
+        recover_dumbo_ = true;
+    }
+
+    bool connectLeftArmSrvCallback(std_srvs::Empty::Request &req,
                                    std_srvs::Empty::Response &res)
     {
         connect_left_arm_ = true;
     }
 
-    bool leftArmDisconnectSrvCallback(std_srvs::Empty::Request &req,
-                                   std_srvs::Empty::Response &res)
+    bool disconnectLeftArmSrvCallback(std_srvs::Empty::Request &req,
+                                      std_srvs::Empty::Response &res)
     {
         disconnect_left_arm_ = true;
     }
 
 
-    bool rightArmConnectSrvCallback(std_srvs::Empty::Request &req,
+    bool connectRightArmSrvCallback(std_srvs::Empty::Request &req,
                                     std_srvs::Empty::Response &res)
     {
         connect_right_arm_ = true;
     }
 
-    bool rightArmDisconnectSrvCallback(std_srvs::Empty::Request &req,
-                                   std_srvs::Empty::Response &res)
+    bool disconnectRightArmSrvCallback(std_srvs::Empty::Request &req,
+                                       std_srvs::Empty::Response &res)
     {
         disconnect_right_arm_ = true;
     }
 
-    bool pg70ConnectSrvCallback(std_srvs::Empty::Request &req,
-                                    std_srvs::Empty::Response &res)
+    bool connectPG70SrvCallback(std_srvs::Empty::Request &req,
+                                std_srvs::Empty::Response &res)
     {
         connect_pg70_ = true;
     }
 
-    bool pg70DisconnectSrvCallback(std_srvs::Empty::Request &req,
+    bool disconnectPG70SrvCallback(std_srvs::Empty::Request &req,
                                    std_srvs::Empty::Response &res)
     {
         disconnect_pg70_ = true;
     }
 
+    void pg70PosCommandCallback(control_msgs::GripperCommand::ConstPtr &gripper_pos_command)
+    {
+        pg70_pos_command_requested_ = true;
+        pg70_pos_command_ = gripper_pos_command->position;
+    }
+
     void controlLoop()
     {
+
+        ros::Time last, now;
+        ros::Duration period(1.0);
 
         ros::NodeHandle nh;
         controller_manager::ControllerManager cm(&dumbo_hw_, nh);
 
         while(nh.ok())
         {
-            // attend service requests (connect, disconnect, stop, recover)
-            attendServiceRequests();
+            int count = 0;
 
-            // publish hw status message with realtime publishers
-            // but only every N iterations of the control loop
-            publishHWStatus();
+            if(count++>1000)
+            {
+                count = 0;
+                // attend service requests (connect, disconnect, stop, recover)
+                // only done every 1000 iterations
+                attendServiceRequests();
+
+                // publish hw status message with realtime publishers
+                // but only every 100 iterations of the control loop
+                publishHWStatus();
+            }
 
             dumbo_hw_.read();
 
-            cm.update();
+            cm.update(now, period);
 
             // if a parallel gripper command has been requested
             // then send the command to the gripper
@@ -154,12 +236,99 @@ public:
 
     void attendServiceRequests()
     {
+        if(connect_dumbo_)
+        {
+            dumbo_hw_.connect();
+            connect_dumbo_ = false;
+        }
 
+        else if(disconnect_dumbo_)
+        {
+            dumbo_hw_.disconnect();
+            disconnect_dumbo_ = false;
+        }
+
+        if(stop_dumbo_)
+        {
+            dumbo_hw_.stop();
+            stop_dumbo_ = false;
+        }
+
+        else if(recover_dumbo_)
+        {
+            dumbo_hw_.recover();
+            recover_dumbo_ = false;
+        }
+
+        if(connect_left_arm_)
+        {
+            dumbo_hw_.left_arm_hw->connect();
+            connect_left_arm_ = false;
+        }
+
+        else if(disconnect_left_arm_)
+        {
+            dumbo_hw_.left_arm_hw->disconnect();
+            disconnect_left_arm_ = false;
+        }
+
+        if(connect_right_arm_)
+        {
+            dumbo_hw_.right_arm_hw->connect();
+            connect_right_arm_ = false;
+        }
+
+        else if(disconnect_right_arm_)
+        {
+            dumbo_hw_.right_arm_hw->disconnect();
+            disconnect_right_arm_ = false;
+        }
+
+        if(connect_pg70_)
+        {
+            dumbo_hw_.pg70_hw->connect();
+            connect_pg70_ = false;
+        }
+
+        else if(disconnect_pg70_)
+        {
+            dumbo_hw_.pg70_hw->disconnect();
+            disconnect_pg70_ = false;
+        }
     }
 
     void publishHWStatus()
     {
 
+        if(left_arm_status_publisher_->trylock())
+        {
+            left_arm_status_publisher_->msg_.data = dumbo_hw_.left_arm_hw->isInitialized();
+            left_arm_status_publisher_->unlockAndPublish();
+        }
+
+        if(right_arm_status_publisher_->trylock())
+        {
+            right_arm_status_publisher_->msg_.data = dumbo_hw_.right_arm_hw->isInitialized();
+            right_arm_status_publisher_->unlockAndPublish();
+        }
+
+        if(pg70_status_publisher_->trylock())
+        {
+            pg70_status_publisher_->msg_.data = dumbo_hw_.pg70_hw->isInitialized();
+            pg70_status_publisher_->unlockAndPublish();
+        }
+
+        if(left_arm_ft_sensor_status_publisher_->trylock())
+        {
+            left_arm_ft_sensor_status_publisher_->msg_.data = dumbo_hw_.left_ft_sensor_hw->isInitialized();
+            left_arm_ft_sensor_status_publisher_->unlockAndPublish();
+        }
+
+        if(right_arm_ft_sensor_status_publisher_->trylock())
+        {
+            right_arm_ft_sensor_status_publisher_->msg_.data = dumbo_hw_.right_ft_sensor_hw->isInitialized();
+            right_arm_ft_sensor_status_publisher_->unlockAndPublish();
+        }
     }
 
 private:
@@ -168,20 +337,20 @@ private:
 
     // services for connecting/disconnecting to hw
     // as well as stopping/recovering manipulators
-    ros::ServiceServer dumbo_connect_srv_server_;
-    ros::ServiceServer dumbo_disconnect_srv_server_;
+    ros::ServiceServer connect_dumbo_srv_server_;
+    ros::ServiceServer disconnect_dumbo_srv_server_;
 
-    ros::ServiceServer dumbo_stop_srv_server_;
-    ros::ServiceServer dumbo_recover_srv_server_;
+    ros::ServiceServer stop_dumbo_srv_server_;
+    ros::ServiceServer recover_dumbo_srv_server_;
 
-    ros::ServiceServer left_arm_connect_srv_server_;
-    ros::ServiceServer left_arm_disconnect_srv_server_;
+    ros::ServiceServer connect_left_arm_srv_server_;
+    ros::ServiceServer disconnect_left_arm_srv_server_;
 
-    ros::ServiceServer right_arm_connect_srv_server_;
-    ros::ServiceServer right_arm_disconnect_srv_server_;
+    ros::ServiceServer connect_right_arm_srv_server_;
+    ros::ServiceServer disconnect_right_arm_srv_server_;
 
-    ros::ServiceServer pg70_connect_srv_server_;
-    ros::ServiceServer pg70_disconnect_srv_server_;
+    ros::ServiceServer connect_pg70_srv_server_;
+    ros::ServiceServer disconnect_pg70_srv_server_;
 
     bool connect_dumbo_;
     bool disconnect_dumbo_;
@@ -198,15 +367,14 @@ private:
     bool connect_pg70_;
     bool disconnect_pg70_;
 
-    // publishers for hw state
-    // they all publish bools or strings
-    realtime_tools::RealtimePublisher left_arm_status_publisher_;
-    realtime_tools::RealtimePublisher right_arm_status_publisher_;
+    // publishers for hw state (connected = True or False)
+    boost::scoped_ptr<realtime_tools::RealtimePublisher> left_arm_status_publisher_;
+    boost::scoped_ptr<realtime_tools::RealtimePublisher> right_arm_status_publisher_;
 
-    realtime_tools::RealtimePublisher pg70_status_publisher_;
+    boost::scoped_ptr<realtime_tools::RealtimePublisher> pg70_status_publisher_;
 
-    realtime_tools::RealtimePublisher left_arm_ft_sensor_status_publisher_;
-    realtime_tools::RealtimePublisher right_arm_ft_sensor_status_publisher_;
+    boost::scoped_ptr<realtime_tools::RealtimePublisher> left_arm_ft_sensor_status_publisher_;
+    boost::scoped_ptr<realtime_tools::RealtimePublisher> right_arm_ft_sensor_status_publisher_;
 
     // subscriber for parallel gripper commands
     // todo: place this is as a separate action controller
@@ -214,6 +382,7 @@ private:
 
     bool pg70_pos_command_requested_;
     double pg70_pos_command_;
+
 
 };
 
@@ -223,9 +392,13 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "dumbo_hw_control_loop");
 
+    // creates the realtime hw control loop
     dumbo_control::DumboHWControlLoop dumbo_hw_control_loop;
 
     ros::spin();
+
+    int rv;
+    pthread_joint(dumbo_hw_control_loop.controlThread, (void **)&rv);
 
     return 0;
 }
