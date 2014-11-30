@@ -62,9 +62,6 @@ public:
     // connects to F/T sensor on CAN bus
     bool connect();
 
-    // disconnects from F/T sensor on CAN bus
-    bool disconnect();
-
     // read force-torque measurement from CAN bus
     void read();
 
