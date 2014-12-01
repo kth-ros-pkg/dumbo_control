@@ -80,6 +80,8 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64.h>
 #include <control_msgs/GripperCommand.h>
+#include <diagnostic_msgs/DiagnosticArray.h>
+#include <diagnostic_updater/DiagnosticStatusWrapper.h>
 #include <boost/scoped_ptr.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
@@ -132,6 +134,34 @@ protected:
   double *history_;
 };
 
+bool g_quit = false;
+
+static struct
+{
+  accumulator_set<double, stats<tag::max, tag::mean> > read_acc;
+  accumulator_set<double, stats<tag::max, tag::mean> > cm_acc;
+  accumulator_set<double, stats<tag::max, tag::mean> > write_acc;
+  accumulator_set<double, stats<tag::max, tag::mean> > loop_acc;
+  accumulator_set<double, stats<tag::max, tag::mean> > jitter_acc;
+  int overruns;
+  int recent_overruns;
+  int last_overrun;
+  int last_severe_overrun;
+  double overrun_loop_sec;
+  double overrun_read;
+  double overrun_cm;
+  double overrun_write;
+
+  // These values are set when realtime loop does not meet performace expections
+  bool rt_loop_not_making_timing;
+  double halt_rt_loop_frequency;
+  double rt_loop_frequency;
+} g_stats;
+
+// other variables used in realtime control loop
+static const int NSEC_PER_SECOND = 1e+9;
+static const int USEC_PER_SECOND = 1e+6;
+
 class DumboHWControlLoop
 {
 public:
@@ -140,7 +170,8 @@ public:
     pthread_t controlThread;
     pthread_attr_t controlThreadAttr;
 
-    DumboHWControlLoop():
+
+     DumboHWControlLoop():
         connect_dumbo_(false),
         disconnect_dumbo_(false),
         stop_dumbo_(false),
@@ -153,8 +184,6 @@ public:
         disconnect_pg70_(false)
     {
         nh_ = ros::NodeHandle("~");
-
-        quit_ = false;
 
         advertiseServices();
         advertiseTopics();
@@ -280,6 +309,91 @@ public:
         pg70_pos_command_ = gripper_pos_command->position;
     }
 
+    static void publishDiagnostics(realtime_tools::RealtimePublisher<diagnostic_msgs::DiagnosticArray> &publisher)
+    {
+      if (publisher.trylock())
+      {
+        accumulator_set<double, stats<tag::max, tag::mean> > zero;
+        std::vector<diagnostic_msgs::DiagnosticStatus> statuses;
+        diagnostic_updater::DiagnosticStatusWrapper status;
+
+        static double max_read = 0, max_cm = 0, max_write = 0, max_loop = 0, max_jitter = 0;
+        double avg_read, avg_cm, avg_write, avg_loop, avg_jitter;
+
+        avg_read           = extract_result<tag::mean>(g_stats.read_acc);
+        avg_cm           = extract_result<tag::mean>(g_stats.cm_acc);
+        avg_write           = extract_result<tag::mean>(g_stats.write_acc);
+        avg_loop         = extract_result<tag::mean>(g_stats.loop_acc);
+        max_read           = std::max(max_read, extract_result<tag::max>(g_stats.read_acc));
+        max_cm           = std::max(max_cm, extract_result<tag::max>(g_stats.cm_acc));
+        max_write           = std::max(max_write, extract_result<tag::max>(g_stats.write_acc));
+        max_loop         = std::max(max_loop, extract_result<tag::max>(g_stats.loop_acc));
+        g_stats.read_acc   = zero;
+        g_stats.cm_acc   = zero;
+        g_stats.write_acc = zero;
+        g_stats.loop_acc = zero;
+
+        // Publish average loop jitter
+        avg_jitter         = extract_result<tag::mean>(g_stats.jitter_acc);
+        max_jitter         = std::max(max_jitter, extract_result<tag::max>(g_stats.jitter_acc));
+        g_stats.jitter_acc = zero;
+
+        static bool first = true;
+        if (first)
+        {
+          first = false;
+          status.add("Robot Description", "dumbo");
+        }
+
+        status.addf("Max dumbo read roundtrip (us)", "%.2f", max_read*USEC_PER_SECOND);
+        status.addf("Avg dumbo read roundtrip (us)", "%.2f", avg_read*USEC_PER_SECOND);
+        status.addf("Max Controller Manager roundtrip (us)", "%.2f", max_cm*USEC_PER_SECOND);
+        status.addf("Avg Controller Manager roundtrip (us)", "%.2f", avg_cm*USEC_PER_SECOND);
+        status.addf("Max dumbo write roundtrip (us)", "%.2f", max_write*USEC_PER_SECOND);
+        status.addf("Avg dumbo write roundtrip (us)", "%.2f", avg_write*USEC_PER_SECOND);
+        status.addf("Max Total Loop roundtrip (us)", "%.2f", max_loop*USEC_PER_SECOND);
+        status.addf("Avg Total Loop roundtrip (us)", "%.2f", avg_loop*USEC_PER_SECOND);
+        status.addf("Max Loop Jitter (us)", "%.2f", max_jitter * USEC_PER_SECOND);
+        status.addf("Avg Loop Jitter (us)", "%.2f", avg_jitter * USEC_PER_SECOND);
+        status.addf("Control Loop Overruns", "%d", g_stats.overruns);
+        status.addf("Recent Control Loop Overruns", "%d", g_stats.recent_overruns);
+        status.addf("Last Control Loop Overrun Cause", "read: %.2fus, cm: %.2fus, write: %.2fus",
+                    g_stats.overrun_read*USEC_PER_SECOND, g_stats.overrun_cm*USEC_PER_SECOND,
+                    g_stats.overrun_write*USEC_PER_SECOND);
+        status.addf("Last Overrun Loop Time (us)", "%.2f", g_stats.overrun_loop_sec * USEC_PER_SECOND);
+        status.addf("Realtime Loop Frequency", "%.4f", g_stats.rt_loop_frequency);
+
+        status.name = "Realtime Control Loop";
+        if (g_stats.overruns > 0 && g_stats.last_overrun < 30)
+        {
+          if (g_stats.last_severe_overrun < 30)
+        status.level = 1;
+          else
+        status.level = 0;
+          status.message = "Realtime loop used too much time in the last 30 seconds.";
+        }
+        else
+        {
+          status.level = 0;
+          status.message = "OK";
+        }
+        g_stats.recent_overruns = 0;
+        g_stats.last_overrun++;
+        g_stats.last_severe_overrun++;
+
+        if (g_stats.rt_loop_not_making_timing)
+        {
+          status.mergeSummaryf(status.ERROR, "Halting, realtime loop only ran at %.4f Hz", g_stats.halt_rt_loop_frequency);
+        }
+
+        statuses.push_back(status);
+        publisher.msg_.status = statuses;
+        publisher.msg_.header.stamp = ros::Time::now();
+        publisher.unlockAndPublish();
+      }
+    }
+
+
     static void *controlLoop(void * ptr)
     {
         DumboHWControlLoop* object_ptr = (DumboHWControlLoop *) ptr;
@@ -310,7 +424,13 @@ public:
 
         dumbo_hardware_interface::DumboHW dumbo_hw;
         controller_manager::ControllerManager cm(&dumbo_hw, nh);
-        realtime_tools::RealtimePublisher<std_msgs::Float64> rtpublisher(nh, "realtime", 2);
+
+        realtime_tools::RealtimePublisher<diagnostic_msgs::DiagnosticArray> diag_publisher(nh, "/diagnostics", 2);
+        realtime_tools::RealtimePublisher<std_msgs::Float64> jitter_publisher(nh, "jitter", 2);
+
+
+        // Publish one-time before entering real-time to pre-allocate message vectors
+        publishDiagnostics(diag_publisher);
 
         // Set to realtime scheduler for this thread
         struct sched_param thread_param;
@@ -332,12 +452,12 @@ public:
         last_rt_monitor_time = now();
         last_loop_start = now();
 
-        while(!quit_)
+        while(!g_quit)
         {
             // Track how long the actual loop takes
             double this_loop_start = now();
             double this_loop_period = this_loop_start - last_loop_start;
-            stats_.loop_acc(this_loop_start - last_loop_start);
+            g_stats.loop_acc(this_loop_start - last_loop_start);
             last_loop_start = this_loop_start;
 
             double start = now();
@@ -370,12 +490,47 @@ public:
 
             double end = now();
 
-            stats_.read_acc(after_read - start);
-            stats_.cm_acc(after_update - after_read);
-            stats_.write_acc(end-after_update);
+            g_stats.read_acc(after_read - start);
+            g_stats.cm_acc(after_update - after_read);
+            g_stats.write_acc(end-after_update);
 
 
-            // Realtime loop should run about 1000Hz.
+            // attend service requests and publish HW status and diagnostics
+            // every second
+            if((end-last_published) > 1.0)
+            {
+                publishDiagnostics(diag_publisher);
+
+                // attend service requests (connect, disconnect, stop, recover)
+                object_ptr->attendServiceRequests(dumbo_hw);
+
+                // publish hw status message with realtime publishers
+                object_ptr->publishHWStatus(dumbo_hw);
+
+                last_published = end;
+            }
+
+            // set the control frequency to 500 Hz / 1KHz depending
+            // on whether the parallel gripper and left arm are both connected
+            // both connected --> 500 Hz
+            // only one of them connected --> 1KHz
+            if((!dumbo_hw.left_arm_hw->isInitialized())&&(dumbo_hw.pg70_hw->isInitialized()))
+            {
+                period = 1e+6;
+            }
+
+            else if((dumbo_hw.left_arm_hw->isInitialized())&&(!dumbo_hw.pg70_hw->isInitialized()))
+            {
+                period = 1e+6;
+            }
+
+            else
+            {
+                period = 2e+6;
+            }
+
+
+            // Realtime loop should run about 500 or 1000Hz.
             // Missing timing on a control cycles usually causes a controller glitch and actuators to jerk.
             // When realtime loop misses a lot of cycles controllers will perform poorly and may cause robot to shake.
             // Halt motors if realtime loop does not run enough cycles over a given period.
@@ -391,17 +546,18 @@ public:
                 if (avg_rt_loop_frequency < min_acceptable_rt_loop_frequency)
                 {
 //                    g_halt_motors = true;
-                    if (!stats_.rt_loop_not_making_timing)
+                    if (!g_stats.rt_loop_not_making_timing)
                     {
                         // Only update this value if motors when this first occurs (used for diagnostics error message)
-                        stats_.halt_rt_loop_frequency = avg_rt_loop_frequency;
+                        g_stats.halt_rt_loop_frequency = avg_rt_loop_frequency;
                     }
-                    stats_.rt_loop_not_making_timing = true;
+                    g_stats.rt_loop_not_making_timing = true;
                 }
-                stats_.rt_loop_frequency = avg_rt_loop_frequency;
+                g_stats.rt_loop_frequency = avg_rt_loop_frequency;
                 rt_cycle_count = 0;
                 last_rt_monitor_time = start;
             }
+
 
             // Compute end of next period
             timespecInc(tick, period);
@@ -411,7 +567,7 @@ public:
             if ((before.tv_sec + double(before.tv_nsec)/NSEC_PER_SECOND) > (tick.tv_sec + double(tick.tv_nsec)/NSEC_PER_SECOND))
             {
                 // Total amount of time the loop took to run
-                stats_.overrun_loop_sec = (before.tv_sec + double(before.tv_nsec)/NSEC_PER_SECOND) -
+                g_stats.overrun_loop_sec = (before.tv_sec + double(before.tv_nsec)/NSEC_PER_SECOND) -
                         (tick.tv_sec + double(tick.tv_nsec)/NSEC_PER_SECOND);
 
                 // We overran, snap to next "period"
@@ -420,20 +576,20 @@ public:
                 timespecInc(tick, period);
 
                 // initialize overruns
-                if (stats_.overruns == 0){
-                    stats_.last_overrun = 1000;
-                    stats_.last_severe_overrun = 1000;
+                if (g_stats.overruns == 0){
+                    g_stats.last_overrun = 1000;
+                    g_stats.last_severe_overrun = 1000;
                 }
                 // check for overruns
-                if (stats_.recent_overruns > 10)
-                    stats_.last_severe_overrun = 0;
-                stats_.last_overrun = 0;
+                if (g_stats.recent_overruns > 10)
+                    g_stats.last_severe_overrun = 0;
+                g_stats.last_overrun = 0;
 
-                stats_.overruns++;
-                stats_.recent_overruns++;
-                stats_.overrun_read = after_read - start;
-                stats_.overrun_cm = after_update - after_read;
-                stats_.overrun_write = end - after_update;
+                g_stats.overruns++;
+                g_stats.recent_overruns++;
+                g_stats.overrun_read = after_read - start;
+                g_stats.overrun_cm = after_update - after_read;
+                g_stats.overrun_write = end - after_update;
             }
 
             // Sleep until end of period
@@ -444,49 +600,30 @@ public:
             clock_gettime(CLOCK_REALTIME, &after);
             double jitter = (after.tv_sec - tick.tv_sec + double(after.tv_nsec-tick.tv_nsec)/NSEC_PER_SECOND);
 
-            stats_.jitter_acc(jitter);
+            g_stats.jitter_acc(jitter);
 
             // Publish realtime loops statistics, if requested
-            if (rtpublisher)
+            if (jitter_publisher.trylock())
             {
-                if (rtpublisher.trylock())
-                {
-                    rtpublisher.msg_.data  = jitter;
-                    rtpublisher.unlockAndPublish();
-                }
+                jitter_publisher.msg_.data  = jitter;
+                jitter_publisher.unlockAndPublish();
             }
 
-            // attend service requests and publish HW status
-            // every second
-            if((end-last_published) > 1.0)
-            {
-                last_published = end;
-                // attend service requests (connect, disconnect, stop, recover)
-                object_ptr->attendServiceRequests(dumbo_hw);
-
-                // publish hw status message with realtime publishers
-                object_ptr->publishHWStatus(dumbo_hw);
-            }
-
-            // set the control period to 500 Hz / 1KHz depending
-            // on whether the parallel gripper or left arm are connected
-            if(!dumbo_hw.left_arm_hw->isInitialized())
-            {
-                period = 1e+6;
-            }
-
-            else if(!dumbo_hw.pg70_hw->isInitialized())
-            {
-                period = 1e+6;
-            }
-
-            else
-            {
-                period = 2e+6;
-            }
-
-            // do some sleep here
         }
+
+        // read any remaining messages in the CAN bus
+        dumbo_hw.read();
+
+        // stop all motors by writing zero vel to the joints
+        dumbo_hw.left_arm_hw->writeZeroVel();
+        dumbo_hw.right_arm_hw->writeZeroVel();
+        dumbo_hw.pg70_hw->writeZeroVel();
+
+
+        diag_publisher.stop();
+        jitter_publisher.stop();
+
+        ros::Duration(3.0).sleep();
 
         return (void *)rv;
     }
@@ -598,7 +735,7 @@ public:
 
     static void quitRequested(int sig)
     {
-        quit_ = true;
+        g_quit = true;
     }
 
     static void timespecInc(struct timespec &tick, int nsec)
@@ -665,33 +802,6 @@ private:
     bool pg70_pos_command_requested_;
     double pg70_pos_command_;
 
-    // for killing the program
-    static bool quit_;
-
-    // other variables used in realtime control loop
-    static const int NSEC_PER_SECOND = 1e+9;
-
-    static struct
-    {
-      accumulator_set<double, stats<tag::max, tag::mean> > read_acc;
-      accumulator_set<double, stats<tag::max, tag::mean> > cm_acc;
-      accumulator_set<double, stats<tag::max, tag::mean> > write_acc;
-      accumulator_set<double, stats<tag::max, tag::mean> > loop_acc;
-      accumulator_set<double, stats<tag::max, tag::mean> > jitter_acc;
-      int overruns;
-      int recent_overruns;
-      int last_overrun;
-      int last_severe_overrun;
-      double overrun_loop_sec;
-      double overrun_read;
-      double overrun_cm;
-      double overrun_write;
-
-      // These values are set when realtime loop does not meet performace expections
-      bool rt_loop_not_making_timing;
-      double halt_rt_loop_frequency;
-      double rt_loop_frequency;
-    } stats_;
 
 };
 
