@@ -59,8 +59,8 @@ public:
     // CAN mutex and handles in case the arm shares CAN bus with e.g.
     // a gripper
     SchunkArmHW(const ros::NodeHandle &nh,
-                               boost::shared_ptr<pthread_mutex_t> CAN_mutex,
-                               boost::shared_ptr<canHandle> CAN_handle);
+                boost::shared_ptr<pthread_mutex_t> CAN_mutex,
+                boost::shared_ptr<canHandle> CAN_handle);
 
     ~SchunkArmHW();
 
@@ -99,6 +99,9 @@ public:
     // writes command to a module and waits for its status message
     // reply over the CAN bus
     void writeAndRead();
+
+    // write zero velocity to all the joints
+    void writeZeroVel();
 
 
 private:

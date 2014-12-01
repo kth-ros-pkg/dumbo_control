@@ -93,7 +93,6 @@ public:
     void write(double gripper_pos_command);
 
 
-
 private:
 
     //hardware interfaces

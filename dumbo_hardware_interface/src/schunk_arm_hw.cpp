@@ -40,8 +40,8 @@ namespace dumbo_hardware_interface
 {
 
 SchunkArmHW::SchunkArmHW(const ros::NodeHandle &nh,
-                                                       boost::shared_ptr<pthread_mutex_t> CAN_mutex,
-                                                       boost::shared_ptr<canHandle> CAN_handle) :
+                         boost::shared_ptr<pthread_mutex_t> CAN_mutex,
+                         boost::shared_ptr<canHandle> CAN_handle) :
     PowerCubeCtrl(CAN_mutex, CAN_handle),
     nh_(nh),
     written_(false),
@@ -418,6 +418,11 @@ void SchunkArmHW::writeAndRead()
 
     }
 
+}
+
+void SchunkArmHW::writeZeroVel()
+{
+    moveVel(std::vector<double>(params_->GetDOF(), 0.0));
 }
 
 }

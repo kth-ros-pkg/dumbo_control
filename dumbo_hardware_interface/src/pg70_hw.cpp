@@ -41,8 +41,8 @@ namespace dumbo_hardware_interface
 {
 
 PG70HW::PG70HW(const ros::NodeHandle &nh,
-                                             boost::shared_ptr<pthread_mutex_t> CAN_mutex,
-                                             boost::shared_ptr<canHandle> CAN_handle) :
+               boost::shared_ptr<pthread_mutex_t> CAN_mutex,
+               boost::shared_ptr<canHandle> CAN_handle) :
     PG70Gripper(CAN_mutex, CAN_handle),
     nh_(nh)
 {
@@ -352,6 +352,11 @@ void PG70HW::writeReadPos()
             return;
         }
     }
+}
+
+void PG70HW::writeZeroVel()
+{
+    moveVel(0.0);
 }
 
 

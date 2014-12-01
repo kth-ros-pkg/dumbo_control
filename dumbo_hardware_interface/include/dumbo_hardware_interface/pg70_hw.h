@@ -53,10 +53,10 @@ namespace dumbo_hardware_interface
 class PG70HW : public PG70Gripper
 {
 
- public:
+public:
     PG70HW(const ros::NodeHandle &nh,
-                          boost::shared_ptr<pthread_mutex_t> CAN_mutex,
-                          boost::shared_ptr<canHandle> CAN_handle);
+           boost::shared_ptr<pthread_mutex_t> CAN_mutex,
+           boost::shared_ptr<canHandle> CAN_handle);
 
     ~PG70HW();
 
@@ -85,6 +85,10 @@ class PG70HW : public PG70Gripper
     // execute joint position command
     // reads status feedback message
     void writeReadPos();
+
+    // sends zero velocity command to gripper
+    void writeZeroVel();
+
 
 private:
 
