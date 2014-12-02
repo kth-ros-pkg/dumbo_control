@@ -15,7 +15,6 @@
 
   <!-- Dumbo realtime HW control loop -->
   <node name="dumbo_hw_control_loop" pkg="dumbo_hw_control_loop" type="dumbo_hw_control_loop" output="screen" />
-  
-  
+   
 
 </launch>

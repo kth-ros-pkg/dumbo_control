@@ -197,6 +197,8 @@ public:
         signal(SIGHUP, quitRequested);
 
         // start realtime hw control loop thread
+        pthread_attr_init(&controlThreadAttr);
+
         int rv;
         if ((rv = pthread_create(&controlThread, &controlThreadAttr, DumboHWControlLoop::controlLoop, this)) != 0)
         {
@@ -426,8 +428,6 @@ public:
         controller_manager::ControllerManager cm(&dumbo_hw, nh);
 
         realtime_tools::RealtimePublisher<diagnostic_msgs::DiagnosticArray> diag_publisher(nh, "/diagnostics", 2);
-        realtime_tools::RealtimePublisher<std_msgs::Float64> jitter_publisher(nh, "jitter", 2);
-
 
         // Publish one-time before entering real-time to pre-allocate message vectors
         publishDiagnostics(diag_publisher);
@@ -602,13 +602,6 @@ public:
 
             g_stats.jitter_acc(jitter);
 
-            // Publish realtime loops statistics, if requested
-            if (jitter_publisher.trylock())
-            {
-                jitter_publisher.msg_.data  = jitter;
-                jitter_publisher.unlockAndPublish();
-            }
-
         }
 
         // read any remaining messages in the CAN bus
@@ -621,7 +614,6 @@ public:
 
 
         diag_publisher.stop();
-        jitter_publisher.stop();
 
         ros::Duration(3.0).sleep();
 
@@ -735,6 +727,7 @@ public:
 
     static void quitRequested(int sig)
     {
+        ROS_INFO("======= Shutting down Dumbo!!! =======");
         g_quit = true;
     }
 

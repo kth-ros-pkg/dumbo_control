@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
     diagnostic_updater
 )
 
-find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system thread)
 
 catkin_package(
   DEPENDS
@@ -31,7 +31,8 @@ include_directories(
 link_directories(${catkin_LIBRARY_DIRS})
 
 add_executable(dumbo_hw_control_loop src/dumbo_hw_control_loop.cpp)
-target_link_libraries(dumbo_hw_control_loop ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(dumbo_hw_control_loop rt ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+add_dependencies(dumbo_hw_control_loop ${catkin_EXPORTED_TARGETS})
 
 install(TARGETS dumbo_hw_control_loop
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
