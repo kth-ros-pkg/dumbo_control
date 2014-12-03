@@ -3,17 +3,17 @@
 
 
   <!-- upload robot description -->
-  <include file="$(find dumbo_hardware_config)/common/upload_dumbo_robotiq.launch" />
+  <include file="$(find dumbo_description)/robots/upload_dumbo_robotiq.launch" />
 
 
-  <!-- Dumbo realtime HW control loop -->
-  <node name="dumbo_hw_control_loop" pkg="dumbo_hw_control_loop" type="dumbo_hw_control_loop" output="screen" >
-    <rosparam command="load" file="$(find dumbo_hardware_config)/dumbo/config/left_arm.yaml" ns="/left_arm"/>
-    <rosparam command="load" file="$(find dumbo_hardware_config)/dumbo/config/right_arm.yaml" ns="/right_arm"/>
-    <rosparam command="load" file="$(find dumbo_hardware_config)/dumbo/config/pg70.yaml" ns="/PG70_gripper"/>
-    <rosparam command="load" file="$(find dumbo_hardware_config)/dumbo/config/left_arm_ft_sensor.yaml" ns="/left_arm_ft_sensor"/>
-    <rosparam command="load" file="$(find dumbo_hardware_config)/dumbo/config/right_arm_ft_sensor.yaml" ns="/right_arm_ft_sensor"/>
-  </node>
+  <!-- load hardware config parameters -->
+  <include file="$(find dumbo_hardware_config)/launch/dumbo_hardware_config.launch" />
+
+
+  <!-- Dumbo realtime HW control loop w sudo rights -->
+  <!-- The user must be able to do passwordless sudo!!!  -->
+  <!-- see the instructions in this package's github page or in CVAP's wiki page -->
+  <node name="dumbo_hw_control_loop" pkg="dumbo_hw_control_loop" type="dumbo_hw_control_loop" output="screen" launch-prefix="sudo"/>
    
 
 </launch>

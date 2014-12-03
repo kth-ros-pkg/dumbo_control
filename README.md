@@ -10,15 +10,21 @@ This metapackage contains [Dumbo's][1] low level control and hardware interface 
 Installation
 ---------------------------------------------
 
-Make sure you have **sudo rights!**. The (soft-) low level realtime hardware control loop requires sudo rights to be able to run the control thread with a **realtime scheduler**. If you don't have sudo rights you can comment out the following line in the CMakeLists.txt of the **dumbo_hw_control_loop** package:
+Make sure you have **sudo rights!**. The (soft-) low level realtime hardware control loop requires sudo rights to be able to run the control thread with a **realtime scheduler**. 
 
-<code>
-  add_custom_command(
-    TARGET ${PROJECT_NAME}
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/set_root_hw_control_loop.sh
-    ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/${PROJECT_NAME} ${PROJECT_NAME} 
-  )
-</code>
+To be able to run the hw control loop with passwordless sudo you need to add the some lines to the **sudoers** file.
+
+First run the following command to be able to edit the sudoers file:
+  sudo visudo
+
+Then add the following lines at the end of the file:
+
+  <user_name> ALL = NOPASSWD: /home/<user_name>/catkin_ws/devel/lib/dumbo_hw_control_loop/dumbo_hw_control_loop
+
+  Defaults        env_keep+="ROS_MASTER_URI ROS_DISTRO ROS_ETC_DIR ROSLISP_PACKAGE_DIRECTORIES ROS_PACKAGE_PATH ROS_ROOT ROS_TEST_RESULTS_DIR"
+
+Where <user_name>  is your user name. 
+
 
 dumbo_hardware_interface
 ---------------------------------------------
