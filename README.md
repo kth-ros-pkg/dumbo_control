@@ -15,7 +15,10 @@ Make sure you have **sudo rights!**. The (soft-) low level realtime hardware con
 To be able to run the hw control loop with **passwordless sudo** you need to add the some lines to the **sudoers** file.
 
 First run the following command to be able to edit the sudoers file:
+
+<code>
   sudo visudo
+</code>
 
 Then add the following lines at the end of the file:
 
