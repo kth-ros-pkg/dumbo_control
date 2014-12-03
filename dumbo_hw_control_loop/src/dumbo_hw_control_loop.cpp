@@ -619,6 +619,8 @@ public:
 
         ros::Duration(3.0).sleep();
 
+        ROS_INFO("-----------> Exiting Dumbo HW control loop!!!!!!!");
+
         return (void *)rv;
     }
 
@@ -729,7 +731,7 @@ public:
 
     static void quitRequested(int sig)
     {
-        ROS_INFO("======= Shutting down Dumbo!!! =======");
+        ROS_INFO("======= Requesting shutdown of Dumbo!!! =======");
         g_quit = true;
     }
 
