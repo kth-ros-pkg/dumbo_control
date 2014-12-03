@@ -16,12 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Boost REQUIRED COMPONENTS system thread)
 
-catkin_package(
-  DEPENDS
-  CATKIN_DEPENDS  roscpp dumbo_hardware_interface controller_manager realtime_tools control_msgs std_srvs std_msgs diagnostic_msgs diagnostic_updater
-  INCLUDE_DIRS
-  LIBRARIES
-)
+catkin_package()
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
