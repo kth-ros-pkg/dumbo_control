@@ -20,10 +20,10 @@ First run the following command to be able to edit the sudoers file:
   sudo visudo
 </code>
 
-Then add the following lines at the end of the file:
+Then add the following 2 lines at the end of the file:
 
 <code>
-    user_name ALL = NOPASSWD: /home/user_name/catkin_ws/devel/lib/dumbo_hw_control_loop/dumbo_hw_control_loop
+    **user_name** ALL = NOPASSWD: /home/**user_name**/catkin_ws/devel/lib/dumbo_hw_control_loop/dumbo_hw_control_loop
 
     Defaults        env_keep+="ROS_MASTER_URI ROS_DISTRO ROS_ETC_DIR ROSLISP_PACKAGE_DIRECTORIES ROS_PACKAGE_PATH ROS_ROOT ROS_TEST_RESULTS_DIR"
 </code>
