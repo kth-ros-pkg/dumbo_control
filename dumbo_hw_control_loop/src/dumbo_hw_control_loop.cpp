@@ -89,6 +89,7 @@
 #include <boost/accumulators/statistics/mean.hpp>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/mman.h>
 
 using namespace boost::accumulators;
 
@@ -803,6 +804,12 @@ private:
 
 int main(int argc, char **argv)
 {
+    // Keep the kernel from swapping us out
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) < 0) {
+      perror("mlockall");
+      return -1;
+    }
+
     ros::init(argc, argv, "dumbo_hw_control_loop");
 
     // creates the realtime hw control loop
