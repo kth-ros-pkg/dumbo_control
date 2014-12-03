@@ -196,6 +196,7 @@ public:
         signal(SIGTERM, quitRequested);
         signal(SIGINT, quitRequested);
         signal(SIGHUP, quitRequested);
+        signal(SIGKILL, quitRequested);
 
         // start realtime hw control loop thread
         pthread_attr_init(&controlThreadAttr);
@@ -515,20 +516,20 @@ public:
             // on whether the parallel gripper and left arm are both connected
             // both connected --> 500 Hz
             // only one of them connected --> 1KHz
-            if((!dumbo_hw.left_arm_hw->isInitialized())&&(dumbo_hw.pg70_hw->isInitialized()))
-            {
-                period = 1e+6;
-            }
+//            if((!dumbo_hw.left_arm_hw->isInitialized())&&(dumbo_hw.pg70_hw->isInitialized()))
+//            {
+//                period = 1e+6;
+//            }
 
-            else if((dumbo_hw.left_arm_hw->isInitialized())&&(!dumbo_hw.pg70_hw->isInitialized()))
-            {
-                period = 1e+6;
-            }
+//            else if((dumbo_hw.left_arm_hw->isInitialized())&&(!dumbo_hw.pg70_hw->isInitialized()))
+//            {
+//                period = 1e+6;
+//            }
 
-            else
-            {
-                period = 2e+6;
-            }
+//            else
+//            {
+//                period = 2e+6;
+//            }
 
 
             // Realtime loop should run about 500 or 1000Hz.

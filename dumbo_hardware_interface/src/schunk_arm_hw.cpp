@@ -169,19 +169,19 @@ void SchunkArmHW::getROSParams()
     params_->SetMaxAcc(MaxAccelerations);
 
     /// Get horizon
-    double Horizon;
+    double horizon;
     if (nh_.hasParam("horizon"))
     {
-        nh_.getParam("horizon", Horizon);
+        nh_.getParam("horizon", horizon);
     }
 
     else
     {
         /// Horizon in sec
-        Horizon = 0.05;
-        ROS_WARN("Parameter horizon not available, setting to default value: %f sec", Horizon);
+        horizon = 0.1;
+        ROS_WARN("Parameter horizon not available, setting to default value: %f sec", horizon);
     }
-    setHorizon(Horizon);
+    setHorizon(horizon);
 
 
     // make sure arm select coincides with joint names in the parameter server
@@ -350,6 +350,7 @@ void SchunkArmHW::read(bool wait_for_response)
     // read the joint positions and velocities and store them in the buffer
     if(isInitialized())
     {
+
         // we need to read the status response msg from the CAN bus
         if(written_)
         {
@@ -366,13 +367,17 @@ void SchunkArmHW::read(bool wait_for_response)
 
         joint_positions_[module_number_] = getPositions()[module_number_];
         joint_velocities_[module_number_] = getVelocities()[module_number_];
+
+
+        // sequential ordering of commands
+//        module_number_++;
+        if(module_number_ >= params_->GetDOF()) module_number_ = 0;
     }
 
 }
 
 void SchunkArmHW::write()
 {
-
     if(isInitialized())
     {
         bool ret = moveVel(joint_velocity_command_[module_number_], module_number_, false);
@@ -385,10 +390,6 @@ void SchunkArmHW::write()
         }
 
         written_ = true;
-
-        // sequential ordering of commands
-        module_number_++;
-        if(module_number_ >= params_->GetDOF()) module_number_ = 0;
     }
 }
 
@@ -396,7 +397,6 @@ void SchunkArmHW::writeAndRead()
 {
     if(isInitialized())
     {
-
         // clear previously written message
         if(written_)
         {
