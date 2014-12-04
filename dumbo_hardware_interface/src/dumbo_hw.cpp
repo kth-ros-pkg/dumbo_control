@@ -135,8 +135,8 @@ void DumboHW::recover()
 
 void DumboHW::read()
 {
-    left_arm_hw->read();
-    right_arm_hw->read();
+    left_arm_hw->read(true);
+    right_arm_hw->read(true);
 
     pg70_hw->read();
 
@@ -157,15 +157,9 @@ void DumboHW::write()
 
 void DumboHW::write(double gripper_pos_command)
 {
-    // set gripper pos command on hardware interface
-    hardware_interface::JointHandle pg70_joint_handle = pj_interface_.getHandle("left_arm_top_finger_joint");
-    hardware_interface::JointHandle pg70_joint_handle2 = pj_interface_.getHandle("left_arm_bottom_finger_joint");
-
-    pg70_joint_handle.setCommand(gripper_pos_command);
-    pg70_joint_handle2.setCommand(gripper_pos_command);
 
     // send position command to PG70
-    pg70_hw->writeReadPos();
+    pg70_hw->writeReadPos(gripper_pos_command);
 
     left_arm_hw->write();
     right_arm_hw->write();
