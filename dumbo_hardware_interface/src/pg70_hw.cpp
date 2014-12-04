@@ -339,10 +339,13 @@ void PG70HW::writeReadVel()
     }
 }
 
-void PG70HW::writeReadPos()
+void PG70HW::writeReadPos(double gripper_pos_command)
 {
     if(isInitialized())
     {
+        joint_position_command_[0] = gripper_pos_command;
+        joint_position_command_[1] = gripper_pos_command;
+
         // execute position command
         bool ret = movePos(joint_position_command_[0]);
 

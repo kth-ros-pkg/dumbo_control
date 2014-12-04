@@ -84,7 +84,7 @@ public:
 
     // execute joint position command
     // reads status feedback message
-    void writeReadPos();
+    void writeReadPos(double gripper_pos_command);
 
     // sends zero velocity command to gripper
     void writeZeroVel();
