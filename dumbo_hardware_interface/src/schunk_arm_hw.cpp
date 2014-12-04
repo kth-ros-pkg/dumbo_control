@@ -366,11 +366,12 @@ void SchunkArmHW::read(bool wait_for_response)
         }
 
         joint_positions_[module_number_] = getPositions()[module_number_];
-        joint_velocities_[module_number_] = getVelocities()[module_number_];
+        // TODO: calculate velocities using a KF or some other filter..
+        // joint_velocities_[module_number_] = getVelocities()[module_number_];
 
 
         // sequential ordering of commands
-//        module_number_++;
+        module_number_++;
         if(module_number_ >= params_->GetDOF()) module_number_ = 0;
     }
 
