@@ -614,12 +614,16 @@ public:
         dumbo_hw.right_arm_hw->writeZeroVel();
         dumbo_hw.pg70_hw->writeZeroVel();
 
+        ROS_INFO("====== Disconnecting Dumbo!! ======");
+        dumbo_hw.disconnect();
+        object_ptr->publishHWStatus(dumbo_hw);
 
         diag_publisher.stop();
 
         ros::Duration(3.0).sleep();
 
-        ROS_INFO("-----------> Exiting Dumbo HW control loop!!!!!!!");
+        ROS_INFO("===== Exiting Dumbo HW control loop!!!!!!! ======");
+        ros::shutdown();
 
         return (void *)rv;
     }
@@ -822,6 +826,8 @@ int main(int argc, char **argv)
 
     int rv;
     pthread_join(dumbo_hw_control_loop.controlThread, (void **)&rv);
+
+    munlockall();
 
     return 0;
 }
