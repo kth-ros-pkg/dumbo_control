@@ -69,7 +69,7 @@ public:
 
     ~DumboHW();
 
-    bool connect();
+    void connect();
 
     void disconnect();
 

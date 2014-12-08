@@ -76,37 +76,33 @@ DumboHW::~DumboHW()
 }
 
 
-bool DumboHW::connect()
+void DumboHW::connect()
 {
     if(!left_arm_hw->connect())
     {
         ROS_ERROR("Error connecting to left arm");
-        return false;
     }
 
     if(!right_arm_hw->connect())
     {
         ROS_ERROR("Error connecting to right arm");
-        return false;
     }
 
     if(!pg70_hw->connect())
     {
         ROS_ERROR("Error connecting to PG70 gripper");
-        return false;
     }
 
     if(!left_ft_sensor_hw->connect())
     {
         ROS_ERROR("Error connecting left arm FT sensor");
-        return false;
     }
 
     if(!right_ft_sensor_hw->connect())
     {
         ROS_ERROR("Error connecting right arm FT sensor");
-        return false;
     }
+
 }
 
 
