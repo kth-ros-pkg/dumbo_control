@@ -12,20 +12,19 @@ Installation
 
 Make sure you have **sudo rights!**. The (soft-) low level realtime hardware control loop requires sudo rights to be able to run the control thread with a **realtime scheduler**. 
 
-To be able to run the hw control loop with **passwordless sudo** you need to add the some lines to the **sudoers** file.
+To be able to run the hw control loop you need to modify the **sudoers** file.
 
-First run the following command to be able to edit the sudoers file:
+First run the following command to edit the sudoers file:
 
 <code>
   sudo visudo
 </code>
 
-Then add the following 2 lines at the end of the file:
+Then add the following line at the end of the file:
 
 <code>
-    **user_name** ALL = NOPASSWD: /home/**user_name**/catkin_ws/devel/lib/dumbo_hw_control_loop/dumbo_hw_control_loop
+    **user_name** ALL = NOPASSWD: /home/**user_name**/catkin_ws/src/dumbo_control/dumbo_hw_control_loop/scripts/run_hw_control_loop
 
-    Defaults        env_keep+="ROS_MASTER_URI ROS_DISTRO ROS_ETC_DIR ROSLISP_PACKAGE_DIRECTORIES ROS_PACKAGE_PATH ROS_ROOT ROS_TEST_RESULTS_DIR"
 </code>
 
 Where **user_name**  is your user name. 
