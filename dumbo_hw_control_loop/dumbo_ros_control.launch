@@ -13,7 +13,7 @@
   <!-- Dumbo realtime HW control loop w sudo rights -->
   <!-- The user must be able to do passwordless sudo!!!  -->
   <!-- see the instructions in this package's github page or in CVAP's wiki page -->
-  <node name="dumbo_hw_control_loop" pkg="dumbo_hw_control_loop" type="run_hw_control_loop" output="screen" />
+  <node name="dumbo_hw_control_loop" pkg="dumbo_hw_control_loop" type="dumbo_hw_control_loop" output="screen" />
    
   <node name="dumbo_dashboard" pkg="dumbo_dashboard" type="dumbo_dashboard" output="screen"/>
 
