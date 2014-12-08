@@ -43,6 +43,14 @@ This package contains the (soft) realtime control loop that has access to Dumbo'
 
 This low-level control loop has been designed according to the **ros_control** specifications. Please look at the documentation of the [ros_control][4] package in the ROS wiki as well as the wiki in the package's [github repository][5].
 
+To run the hardware control loop, you need to use the **run_hw_control_loop** script provided with the package:
+
+<code>
+  rosrun dumbo_hw_control_loop run_hw_control_loop
+</code>
+
+This script will modify the executable file for the node so that it runs with sudo rights and then runs the node.
+
 [3]: http://wiki.ros.org/controller_manager
 [4]: http://wiki.ros.org/ros_control
 [5]: https://github.com/ros-controls/ros_control
