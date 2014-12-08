@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# set uid bit in control loop file
+rosrun dumbo_hw_control_loop set_uid
+
+rosrun dumbo_hw_control_loop dumbo_hw_control_loop
