@@ -5,16 +5,18 @@
   <!-- upload robot description -->
   <include file="$(find dumbo_description)/robots/upload_dumbo_robotiq.launch" />
 
-
   <!-- load hardware config parameters -->
   <include file="$(find dumbo_hardware_config)/launch/dumbo_hardware_config.launch" />
 
-
   <!-- Dumbo realtime HW control loop w sudo rights -->
+  <!-- Controls Schunk arms, parallel gripper and force-torque sensors -->
   <!-- The user must be able to do passwordless sudo!!!  -->
   <!-- see the instructions in this package's github page or in CVAP's wiki page -->
-  <node name="dumbo_hw_control_loop" pkg="dumbo_hw_control_loop" type="dumbo_hw_control_loop" output="screen" />
-   
+  <node name="dumbo_hw_control_loop" pkg="dumbo_hw_control_loop" type="dumbo_hw_control_loop" output="screen"/>
+
+  <!-- load Dumbo default controllers -->
+  <include file="$(find dumbo_controller_config)/launch/dumbo_default_controllers.launch" />
+	   
   <node name="dumbo_dashboard" pkg="dumbo_dashboard" type="dumbo_dashboard" output="screen"/>
 
   <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui" output="screen"/>
