@@ -470,7 +470,7 @@ public:
             double after_read = now();
 
             // update controller manager
-            cm.update(ros::Time(after_read), ros::Duration(this_loop_period));
+            cm.update(ros::Time::now(), ros::Duration(this_loop_period));
 
             double after_update = now();
 
