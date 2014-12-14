@@ -28,6 +28,16 @@ Then add the following line at the end of the file:
 
 Where **user_name**  is your user name. 
 
+**NB: Alternatively, you can also compile/run the control loop without sudo rights!!!** 
+
+However, this will probably lower the control frequency of the robot. You can compile/run without sudo rights by eliminating the following line from the **CMakeLists.txt** of the **dumbo_hw_control_loop** package:
+
+<code>
+add_custom_command(
+  TARGET ${PROJECT_NAME}
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/set_uid ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/${PROJECT_NAME} ${PROJECT_NAME})
+</code>
+
 
 dumbo_hardware_interface
 ---------------------------------------------
