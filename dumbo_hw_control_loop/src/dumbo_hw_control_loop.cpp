@@ -502,6 +502,22 @@ public:
 
             double after_update = now();
 
+
+            // attend service requests and publish HW status and diagnostics
+            // every second
+            if((after_update-last_published) > 1.0)
+            {
+                publishDiagnostics(diag_publisher);
+
+                // attend service requests (connect, disconnect, stop, recover)
+                object_ptr->attendServiceRequests(dumbo_hw);
+
+                // publish hw status message with realtime publishers
+                object_ptr->publishHWStatus(dumbo_hw);
+
+                last_published = after_update;
+            }
+
             // now write to HW (joints + gripper + ft sensors)
             // if a parallel gripper command has been requested
             // then send the command to the gripper
@@ -524,21 +540,6 @@ public:
             g_stats.cm_acc(after_update - after_read);
             g_stats.write_acc(end-after_update);
 
-
-            // attend service requests and publish HW status and diagnostics
-            // every second
-            if((end-last_published) > 1.0)
-            {
-                publishDiagnostics(diag_publisher);
-
-                // attend service requests (connect, disconnect, stop, recover)
-                object_ptr->attendServiceRequests(dumbo_hw);
-
-                // publish hw status message with realtime publishers
-                object_ptr->publishHWStatus(dumbo_hw);
-
-                last_published = end;
-            }
 
             // set the control frequency to 500 Hz / 1KHz depending
             // on whether the parallel gripper and left arm are both connected
@@ -668,6 +669,7 @@ public:
 
         if(connect_dumbo_)
         {
+            ROS_INFO("Connecting to Dumbo");
             dumbo_hw.connect();
             dumbo_hw.engageArms();
             connect_dumbo_ = false;
@@ -675,54 +677,66 @@ public:
 
         else if(disconnect_dumbo_)
         {
+            ROS_INFO("Disconnecting from Dumbo");
             dumbo_hw.disconnect();
             disconnect_dumbo_ = false;
         }
 
         if(stop_dumbo_)
         {
+            ROS_INFO("Stopping dumbo");
             dumbo_hw.stop();
             stop_dumbo_ = false;
         }
 
         else if(recover_dumbo_)
         {
-            dumbo_hw.recover();
             recover_dumbo_ = false;
+            // sleep to make sure the arm engages the brakes
+            ROS_INFO("Recovering dumbo");
+            ros::Duration(3.0).sleep();
+            dumbo_hw.recover();
+            ros::Duration(1.0).sleep();
         }
 
         if(connect_left_arm_)
         {
+            ROS_INFO("Connecting Dumbo's left arm");
             dumbo_hw.left_arm_hw->connect();
             connect_left_arm_ = false;
         }
 
         else if(disconnect_left_arm_)
         {
+            ROS_INFO("Disconnecting Dumbo's left arm");
             dumbo_hw.left_arm_hw->disconnect();
             disconnect_left_arm_ = false;
         }
 
         if(connect_right_arm_)
         {
+            ROS_INFO("Connecting Dumbo's right arm");
             dumbo_hw.right_arm_hw->connect();
             connect_right_arm_ = false;
         }
 
         else if(disconnect_right_arm_)
         {
+            ROS_INFO("Disconnecting Dumbo's right arm");
             dumbo_hw.right_arm_hw->disconnect();
             disconnect_right_arm_ = false;
         }
 
         if(connect_pg70_)
         {
+            ROS_INFO("Connecting Dumbo's PG70 gripper");
             dumbo_hw.pg70_hw->connect();
             connect_pg70_ = false;
         }
 
         else if(disconnect_pg70_)
         {
+            ROS_INFO("Disconnecting Dumbo's PG70 gripper");
             dumbo_hw.pg70_hw->disconnect();
             disconnect_pg70_ = false;
         }
