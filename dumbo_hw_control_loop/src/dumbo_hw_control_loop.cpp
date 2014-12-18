@@ -662,7 +662,7 @@ public:
 
         if(soft_connect_dumbo_)
         {
-            ROS_INFO("Soft-connecting to Dumbo")
+            ROS_INFO("Soft-connecting to Dumbo");
             dumbo_hw.connect();
             dumbo_hw.disengageArms();
             soft_connect_dumbo_ = false;
