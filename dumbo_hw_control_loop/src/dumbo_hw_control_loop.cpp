@@ -662,6 +662,7 @@ public:
 
         if(soft_connect_dumbo_)
         {
+            ROS_INFO("Soft-connecting to Dumbo")
             dumbo_hw.connect();
             dumbo_hw.disengageArms();
             soft_connect_dumbo_ = false;
@@ -743,6 +744,7 @@ public:
 
         if(recover_pg70_)
         {
+            ROS_INFO("Recovering (resetting) PG70 gripper");
             dumbo_hw.pg70_hw->recover();
             recover_pg70_ = false;
         }
