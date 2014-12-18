@@ -92,6 +92,11 @@ public:
     // in this case do read&write in corresponding schunk arm
     void write(double gripper_pos_command);
 
+    // make sure that the arms don't get written to/ read from
+    void disengageArms();
+
+    void engageArms();
+
 
 private:
 
@@ -100,6 +105,8 @@ private:
     hardware_interface::VelocityJointInterface vj_interface_;
     hardware_interface::PositionJointInterface pj_interface_;
     hardware_interface::ForceTorqueSensorInterface ft_sensor_interface_;
+
+    bool disengage_arms_;
 
     // register HW handles and interfaces for ros_control
     void registerHW();

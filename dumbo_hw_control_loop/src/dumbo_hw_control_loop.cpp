@@ -172,7 +172,8 @@ public:
     pthread_attr_t controlThreadAttr;
 
 
-     DumboHWControlLoop():
+    DumboHWControlLoop():
+        soft_connect_dumbo_(false),
         connect_dumbo_(false),
         disconnect_dumbo_(false),
         stop_dumbo_(false),
@@ -182,7 +183,8 @@ public:
         connect_right_arm_(false),
         disconnect_right_arm_(false),
         connect_pg70_(false),
-        disconnect_pg70_(false)
+        disconnect_pg70_(false),
+        recover_pg70_(false)
     {
         nh_ = ros::NodeHandle("~");
 
@@ -217,6 +219,7 @@ public:
     void advertiseServices()
     {
 
+        soft_connect_dumbo_srv_server_ = nh_.advertiseService("/dumbo/soft_connect", &DumboHWControlLoop::softConnectDumboSrvCallback, this);
         connect_dumbo_srv_server_ = nh_.advertiseService("/dumbo/connect", &DumboHWControlLoop::connectDumboSrvCallback, this);
         disconnect_dumbo_srv_server_ = nh_.advertiseService("/dumbo/disconnect", &DumboHWControlLoop::disconnectDumboSrvCallback, this);
 
@@ -231,6 +234,7 @@ public:
 
         connect_pg70_srv_server_ = nh_.advertiseService("/PG70_gripper/connect", &DumboHWControlLoop::connectPG70SrvCallback, this);
         disconnect_pg70_srv_server_ = nh_.advertiseService("/PG70_gripper/disconnect", &DumboHWControlLoop::disconnectPG70SrvCallback, this);
+        recover_pg70_srv_server_ = nh_.advertiseService("/PG70_gripper/recover", &DumboHWControlLoop::recoverPG70SrvCallback, this);
     }
 
     void advertiseTopics()
@@ -246,40 +250,53 @@ public:
 
     // service callback definitions
 
+    bool softConnectDumboSrvCallback(std_srvs::Empty::Request &req,
+                                     std_srvs::Empty::Response &res)
+    {
+        soft_connect_dumbo_ = true;
+        return true;
+    }
+
     bool connectDumboSrvCallback(std_srvs::Empty::Request &req,
                                  std_srvs::Empty::Response &res)
     {
         connect_dumbo_ = true;
+        return true;
     }
 
     bool disconnectDumboSrvCallback(std_srvs::Empty::Request &req,
                                     std_srvs::Empty::Response &res)
     {
         disconnect_dumbo_ = true;
+        return true;
     }
 
     bool stopDumboSrvCallback(std_srvs::Empty::Request &req,
                               std_srvs::Empty::Response &res)
     {
         stop_dumbo_ = true;
+        return true;
     }
 
     bool recoverDumboSrvCallback(std_srvs::Empty::Request &req,
                                  std_srvs::Empty::Response &res)
     {
         recover_dumbo_ = true;
+        return true;
     }
 
     bool connectLeftArmSrvCallback(std_srvs::Empty::Request &req,
                                    std_srvs::Empty::Response &res)
     {
         connect_left_arm_ = true;
+        return true;
     }
 
     bool disconnectLeftArmSrvCallback(std_srvs::Empty::Request &req,
                                       std_srvs::Empty::Response &res)
     {
         disconnect_left_arm_ = true;
+        return true;
     }
 
 
@@ -287,24 +304,35 @@ public:
                                     std_srvs::Empty::Response &res)
     {
         connect_right_arm_ = true;
+        return true;
     }
 
     bool disconnectRightArmSrvCallback(std_srvs::Empty::Request &req,
                                        std_srvs::Empty::Response &res)
     {
         disconnect_right_arm_ = true;
+        return true;
     }
 
     bool connectPG70SrvCallback(std_srvs::Empty::Request &req,
                                 std_srvs::Empty::Response &res)
     {
         connect_pg70_ = true;
+        return true;
     }
 
     bool disconnectPG70SrvCallback(std_srvs::Empty::Request &req,
                                    std_srvs::Empty::Response &res)
     {
         disconnect_pg70_ = true;
+        return true;
+    }
+
+    bool recoverPG70SrvCallback(std_srvs::Empty::Request &req,
+                                std_srvs::Empty::Response &res)
+    {
+        recover_pg70_ = true;
+        return true;
     }
 
     void pg70PosCommandCallback(const control_msgs::GripperCommand::ConstPtr &gripper_pos_command)
@@ -630,9 +658,18 @@ public:
 
     inline void attendServiceRequests(dumbo_hardware_interface::DumboHW &dumbo_hw)
     {
+
+        if(soft_connect_dumbo_)
+        {
+            dumbo_hw.connect();
+            dumbo_hw.disengageArms();
+            soft_connect_dumbo_ = false;
+        }
+
         if(connect_dumbo_)
         {
             dumbo_hw.connect();
+            dumbo_hw.engageArms();
             connect_dumbo_ = false;
         }
 
@@ -688,6 +725,12 @@ public:
         {
             dumbo_hw.pg70_hw->disconnect();
             disconnect_pg70_ = false;
+        }
+
+        if(recover_pg70_)
+        {
+            dumbo_hw.pg70_hw->recover();
+            recover_pg70_ = false;
         }
     }
 
@@ -756,6 +799,8 @@ private:
 
     // services for connecting/disconnecting to hw
     // as well as stopping/recovering manipulators
+    // soft connect connects to the robot without activating the arms
+    ros::ServiceServer soft_connect_dumbo_srv_server_;
     ros::ServiceServer connect_dumbo_srv_server_;
     ros::ServiceServer disconnect_dumbo_srv_server_;
 
@@ -770,7 +815,9 @@ private:
 
     ros::ServiceServer connect_pg70_srv_server_;
     ros::ServiceServer disconnect_pg70_srv_server_;
+    ros::ServiceServer recover_pg70_srv_server_;
 
+    bool soft_connect_dumbo_;
     bool connect_dumbo_;
     bool disconnect_dumbo_;
 
@@ -785,6 +832,7 @@ private:
 
     bool connect_pg70_;
     bool disconnect_pg70_;
+    bool recover_pg70_;
 
     // publishers for hw state (connected = True or False)
     typedef boost::scoped_ptr<realtime_tools::RealtimePublisher<std_msgs::Bool> > RTBoolPublisherPtr;

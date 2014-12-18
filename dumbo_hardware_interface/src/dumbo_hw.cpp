@@ -38,7 +38,7 @@
 
 namespace dumbo_hardware_interface
 {
-DumboHW::DumboHW()
+DumboHW::DumboHW(): disengage_arms_(false)
 {
 
     boost::shared_ptr<pthread_mutex_t> left_arm_CAN_mutex(new pthread_mutex_t);
@@ -131,8 +131,11 @@ void DumboHW::recover()
 
 void DumboHW::read()
 {
-    left_arm_hw->read(true);
-    right_arm_hw->read(true);
+    if(!disengage_arms_)
+    {
+        left_arm_hw->read(true);
+        right_arm_hw->read(true);
+    }
 
     pg70_hw->read();
 
@@ -144,8 +147,11 @@ void DumboHW::write()
 {
     pg70_hw->writeReadVel();
 
-    left_arm_hw->write();
-    right_arm_hw->write();
+    if(!disengage_arms_)
+    {
+        left_arm_hw->write();
+        right_arm_hw->write();
+    }
 
     left_ft_sensor_hw->write();
     right_ft_sensor_hw->write();
@@ -157,11 +163,24 @@ void DumboHW::write(double gripper_pos_command)
     // send position command to PG70
     pg70_hw->writeReadPos(gripper_pos_command);
 
-    left_arm_hw->write();
-    right_arm_hw->write();
+    if(!disengage_arms_)
+    {
+        left_arm_hw->write();
+        right_arm_hw->write();
+    }
 
     left_ft_sensor_hw->write();
     right_ft_sensor_hw->write();
+}
+
+void DumboHW::disengageArms()
+{
+    disengage_arms_ = true;
+}
+
+void DumboHW::engageArms()
+{
+    disengage_arms_ = false;
 }
 
 void DumboHW::registerHW()
