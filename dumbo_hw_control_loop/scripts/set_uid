@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cd ${HOME}/catkin_ws/devel/lib/dumbo_hw_control_loop
+
+sudo chown root:root dumbo_hw_control_loop
+sudo chmod a+rx dumbo_hw_control_loop
+sudo chmod u+s dumbo_hw_control_loop

@@ -1,0 +1,37 @@
+<package>
+  <name>dumbo_hw_control_loop</name>
+  <version>0.0.1</version>
+  <description>
+    Runs Dumbo's main low level hardware control loop (Schunk arms, parallel gripper and force-torque sensors) following the ros_control framework.
+  </description>
+  <maintainer email="fevb@kth.se">Francisco Vina</maintainer>
+  <license>BSD</license>
+
+  <url>http://wiki.ros.org/dumbo_hw_control_loop</url>
+
+  <author email="fevb@kth.se">Francisco Vina</author>
+  <maintainer email="fevb@kth.se">Francisco Vina</maintainer>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>dumbo_hardware_interface</build_depend>
+  <build_depend>controller_manager</build_depend>
+  <build_depend>realtime_tools</build_depend>
+  <build_depend>control_msgs</build_depend>
+  <build_depend>std_srvs</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>diagnostic_msgs</build_depend>
+  <build_depend>diagnostic_updater</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>dumbo_hardware_interface</run_depend>
+  <run_depend>controller_manager</run_depend>
+  <run_depend>realtime_tools</run_depend>
+  <run_depend>control_msgs</run_depend>
+  <run_depend>std_srvs</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>diagnostic_msgs</run_depend>
+  <run_depend>diagnostic_updater</run_depend>
+
+</package>
